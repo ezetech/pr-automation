@@ -1,0 +1,13 @@
+name: 'PR automatically assign reviewers'
+description: 'desc'
+branding:
+  icon: 'book-open'
+  color: 'green'
+inputs:
+  token:
+    required: true
+  config:
+    required: true
+runs:
+  using: 'node16'
+  main: '../dist/auto-assign.js'
