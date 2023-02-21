@@ -275,7 +275,6 @@ export function filterReviewersByState(
       case 'APPROVED':
         response.approve.push(lastAction.author.login);
         break;
-
       case 'CHANGES_REQUESTED':
         response.requiredChanges.push(lastAction.author.login);
         break;

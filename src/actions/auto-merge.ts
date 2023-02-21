@@ -36,12 +36,15 @@ export async function run(): Promise<void> {
       repo,
       pull_number: configInput.pullRequestNumber,
     });
+
     info('Checking requested reviewers.');
 
     if (pullRequest?.requested_reviewers) {
       const requestedChanges = pullRequest?.requested_reviewers?.map(
         (reviewer) => reviewer.login,
       );
+
+      debug(JSON.stringify(requestedChanges, null, 2));
 
       if (requestedChanges.length > 0) {
         warning(`Waiting [${requestedChanges.join(', ')}] to approve.`);
@@ -59,6 +62,8 @@ export async function run(): Promise<void> {
       removeDuplicateReviewer(reviewers),
       reviewers,
     );
+
+    debug(JSON.stringify(reviewersByState, null, 2));
 
     if (reviewersByState.requiredChanges.length) {
       warning(`${reviewersByState.requiredChanges.join(', ')} required changes.`);
