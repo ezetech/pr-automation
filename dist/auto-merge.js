@@ -34069,7 +34069,7 @@ function run() {
             const totalStatus = checks.total_count;
             const totalSuccessStatuses = checks.check_runs.filter((check) => check.conclusion === 'success' || check.conclusion === 'skipped').length;
             if (totalStatus - 1 !== totalSuccessStatuses) {
-                throw new Error(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} (ignored this check) success`);
+                throw new Error(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} success`);
             }
             info(JSON.stringify(reviewers, null, 2));
         }

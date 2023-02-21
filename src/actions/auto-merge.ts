@@ -54,7 +54,7 @@ export async function run(): Promise<void> {
       throw new Error(
         `Not all status success, ${totalSuccessStatuses} out of ${
           totalStatus - 1
-        } (ignored this check) success`,
+        } success`,
       );
     }
 
