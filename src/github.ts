@@ -3,7 +3,7 @@ import { context, getOctokit } from '@actions/github';
 import { getInput } from '@actions/core';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
 import { validateConfig } from './config';
-import { Config } from './config/typings';
+import { Config, Reviewer } from './config/typings';
 import { debug, error, warning } from './logger';
 
 function getMyOctokit() {
@@ -158,13 +158,7 @@ export async function getLatestCommitDate(pr: PullRequest): Promise<{
   }
 }
 
-export type Reviews = {
-  author: string;
-  state: string; // @todo type it more correctly
-  submittedAt: Date;
-};
-
-export async function getReviews(pr: PullRequest): Promise<Reviews[]> {
+export async function getReviews(pr: PullRequest): Promise<Reviewer[]> {
   const octokit = getMyOctokit();
   const reviews = await octokit.paginate(
     'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
@@ -193,4 +187,48 @@ export async function getReviews(pr: PullRequest): Promise<Reviews[]> {
     });
     return result;
   }, []);
+}
+
+export async function getReviewsByGraphQL(pr: PullRequest): Promise<Reviewer[]> {
+  const octokit = getMyOctokit();
+  try {
+    let hasNextPage = true;
+    let reviewsParam = 'last: 100';
+    let response: Reviewer[] = [];
+
+    do {
+      const queryResult = await octokit.graphql<any>(`
+      {
+        repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+          pullRequest(number: ${pr.number}) {
+            reviews(${reviewsParam}) {
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+              nodes {
+                author {
+                  login
+                }
+                state
+                body
+                createdAt
+                updatedAt
+              }  
+            }
+          }
+        }
+      }
+    `);
+      const reviewsResponse = queryResult.repository.pullRequest.reviews;
+      response = [...reviewsResponse.nodes, ...response];
+      hasNextPage = reviewsResponse.pageInfo.hasNextPage;
+      reviewsParam = `last: 100, after: ${reviewsResponse.pageInfo.endCursor}`;
+    } while (hasNextPage);
+
+    return response;
+  } catch (err) {
+    warning(err as Error);
+    throw err;
+  }
 }
