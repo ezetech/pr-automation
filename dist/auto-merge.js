@@ -34121,6 +34121,24 @@ function run() {
             if (totalStatus - 1 !== totalSuccessStatuses) {
                 throw new Error(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} (ignored this check) success`);
             }
+            if (configInput.comment) {
+                const { data: resp } = yield client.issues.createComment({
+                    owner: configInput.owner,
+                    repo: configInput.repo,
+                    issue_number: configInput.pullRequestNumber,
+                    body: configInput.comment,
+                });
+                logger_debug(`Post comment ${(0,external_util_.inspect)(configInput.comment)}`);
+                core.setOutput('commentID', resp.id);
+            }
+            info('Merging...');
+            yield client.pulls.merge({
+                owner,
+                repo,
+                pull_number: configInput.pullRequestNumber,
+                merge_method: configInput.strategy,
+            });
+            core.setOutput('merged', true);
         }
         catch (err) {
             logger_error(err);

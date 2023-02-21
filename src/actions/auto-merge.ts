@@ -1,8 +1,8 @@
 import { inspect } from 'util';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { Inputs, Strategy, Reviewer, ReviewerBySate } from '../config/typings';
-import { info, debug, error, warning } from '../logger';
+import { Inputs, Strategy, ReviewerBySate, Reviewer } from '../config/typings';
+import { info, debug, warning, error } from '../logger';
 import {
   getReviewsByGraphQL,
   removeDuplicateReviewer,
@@ -85,6 +85,29 @@ export async function run(): Promise<void> {
         } (ignored this check) success`,
       );
     }
+
+    if (configInput.comment) {
+      const { data: resp } = await client.issues.createComment({
+        owner: configInput.owner,
+        repo: configInput.repo,
+        issue_number: configInput.pullRequestNumber,
+        body: configInput.comment,
+      });
+
+      debug(`Post comment ${inspect(configInput.comment)}`);
+      core.setOutput('commentID', resp.id);
+    }
+
+    info('Merging...');
+
+    await client.pulls.merge({
+      owner,
+      repo,
+      pull_number: configInput.pullRequestNumber,
+      merge_method: configInput.strategy,
+    });
+
+    core.setOutput('merged', true);
   } catch (err) {
     error(err as Error);
   }
