@@ -1,0 +1,20 @@
+name: Auto Merge Request
+
+on:
+  status:
+  pull_request:
+    types: [ready_for_review, reopened, synchronize, edited, labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  
+
+jobs:
+  auto-merge-request:
+    name: Auto merge reqeust
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use PR auto merge action
+        uses: lashapetriashvili/pr-automation-action@merge
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }} # required
+          comment: 'Test Merge Commit' # Optional
