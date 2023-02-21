@@ -34096,7 +34096,7 @@ function run() {
             info('Checking requested reviewers.');
             if (pullRequest === null || pullRequest === void 0 ? void 0 : pullRequest.requested_reviewers) {
                 const requestedChanges = (_a = pullRequest === null || pullRequest === void 0 ? void 0 : pullRequest.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((reviewer) => reviewer.login);
-                info(JSON.stringify(requestedChanges, null, 2));
+                logger_debug(JSON.stringify(requestedChanges, null, 2));
                 if (requestedChanges.length > 0) {
                     logger_warning(`Waiting [${requestedChanges.join(', ')}] to approve.`);
                     doNotMerge = true;
@@ -34107,7 +34107,7 @@ function run() {
             // @ts-ignore
             const reviewers = yield getReviewsByGraphQL(pullRequest);
             const reviewersByState = filterReviewersByState(removeDuplicateReviewer(reviewers), reviewers);
-            info(JSON.stringify(reviewersByState, null, 2));
+            logger_debug(JSON.stringify(reviewersByState, null, 2));
             if (reviewersByState.requiredChanges.length) {
                 logger_warning(`${reviewersByState.requiredChanges.join(', ')} required changes.`);
                 doNotMerge = true;
