@@ -3,7 +3,7 @@ import { context, getOctokit } from '@actions/github';
 import { getInput } from '@actions/core';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
 import { validateConfig } from './config';
-import { Config, Reviewer } from './config/typings';
+import { Config, Reviewer, State } from './config/typings';
 import { debug, error, warning } from './logger';
 
 function getMyOctokit() {
@@ -101,7 +101,7 @@ export async function fetchChangedFiles({ pr }: { pr: PullRequest }): Promise<st
     });
 
     numberOfFilesInCurrentPage = responseBody.length;
-    changedFiles.push(...responseBody.map((file) => file.filename));
+    changedFiles.push(...responseBody.map((file: any) => file.filename));
   } while (numberOfFilesInCurrentPage === perPage);
 
   return changedFiles;
@@ -158,7 +158,13 @@ export async function getLatestCommitDate(pr: PullRequest): Promise<{
   }
 }
 
-export async function getReviews(pr: PullRequest): Promise<Reviewer[]> {
+export type Reviews = {
+  author: string;
+  state: string;
+  submittedAt: Date;
+};
+
+export async function getReviews(pr: PullRequest): Promise<Reviews[]> {
   const octokit = getMyOctokit();
   const reviews = await octokit.paginate(
     'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
