@@ -20,3 +20,37 @@ export type Config = {
   options?: Options;
   postReviewOptions?: {};
 };
+
+export type ReviewerBySate = {
+  requiredChanges: string[];
+  approve: string[];
+  commeted: string[];
+};
+
+export type State = 'CHANGES_REQUESTED' | 'APPROVED' | 'COMMETED';
+
+export type Author = {
+  login: string;
+};
+
+export type Strategy = 'merge' | 'squash' | 'rebase';
+
+export interface Inputs {
+  comment: string;
+  repo: string;
+  owner: string;
+  pullRequestNumber: number;
+  sha: string;
+  strategy: Strategy;
+  token: string;
+}
+
+export interface Reviewer {
+  author: Author;
+  state: State;
+  body: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  submittedAt?: Date;
+}
+
