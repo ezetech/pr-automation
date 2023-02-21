@@ -34075,6 +34075,7 @@ function run() {
     return auto_merge_awaiter(this, void 0, void 0, function* () {
         try {
             info('Staring PR auto merging.');
+            let doNotMerge = false;
             const [owner, repo] = core.getInput('repository').split('/');
             const configInput = {
                 comment: core.getInput('comment'),
@@ -34095,9 +34096,10 @@ function run() {
             info('Checking requested reviewers.');
             if (pullRequest === null || pullRequest === void 0 ? void 0 : pullRequest.requested_reviewers) {
                 const requestedChanges = (_a = pullRequest === null || pullRequest === void 0 ? void 0 : pullRequest.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((reviewer) => reviewer.login);
+                logger_debug(JSON.stringify(requestedChanges, null, 2));
                 if (requestedChanges.length > 0) {
                     logger_warning(`Waiting [${requestedChanges.join(', ')}] to approve.`);
-                    return;
+                    doNotMerge = true;
                 }
             }
             info('Checking required changes status.');
@@ -34105,9 +34107,10 @@ function run() {
             // @ts-ignore
             const reviewers = yield getReviewsByGraphQL(pullRequest);
             const reviewersByState = filterReviewersByState(removeDuplicateReviewer(reviewers), reviewers);
+            logger_debug(JSON.stringify(reviewersByState, null, 2));
             if (reviewersByState.requiredChanges.length) {
                 logger_warning(`${reviewersByState.requiredChanges.join(', ')} required changes.`);
-                return;
+                doNotMerge = true;
             }
             info(`${reviewersByState.approve.join(', ')} approved changes.`);
             info('Checking CI status.');
@@ -34119,7 +34122,11 @@ function run() {
             const totalStatus = checks.total_count;
             const totalSuccessStatuses = checks.check_runs.filter((check) => check.conclusion === 'success' || check.conclusion === 'skipped').length;
             if (totalStatus - 1 !== totalSuccessStatuses) {
-                throw new Error(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} (ignored this check) success`);
+                logger_warning(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} (ignored this check) success`);
+                doNotMerge = true;
+            }
+            if (doNotMerge) {
+                return;
             }
             if (configInput.comment) {
                 const { data: resp } = yield client.issues.createComment({
