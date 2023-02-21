@@ -33,9 +33,30 @@ export async function run(): Promise<void> {
 
     info('Checking required changes status.');
 
-    // TODO fix typescipt error
+    // TODO fix TypeScript error
     // @ts-ignore
     const reviewers: Reviewer[] = await getReviewsByGraphQL(pullRequest);
+
+    info('Checking CI status.');
+
+    const { data: checks } = await client.checks.listForRef({
+      owner: configInput.owner,
+      repo: configInput.repo,
+      ref: configInput.sha,
+    });
+
+    const totalStatus = checks.total_count;
+    const totalSuccessStatuses = checks.check_runs.filter(
+      (check) => check.conclusion === 'success' || check.conclusion === 'skipped',
+    ).length;
+
+    if (totalStatus - 1 !== totalSuccessStatuses) {
+      throw new Error(
+        `Not all status success, ${totalSuccessStatuses} out of ${
+          totalStatus - 1
+        } (ignored this check) success`,
+      );
+    }
 
     info(JSON.stringify(reviewers, null, 2));
   } catch (err) {
