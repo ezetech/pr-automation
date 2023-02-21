@@ -53,4 +53,3 @@ export interface Reviewer {
   updatedAt?: Date;
   submittedAt?: Date;
 }
-

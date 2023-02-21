@@ -34019,6 +34019,41 @@ function getReviewsByGraphQL(pr) {
         }
     });
 }
+function removeDuplicateReviewer(arr) {
+    const response = {};
+    arr.forEach((reviewer) => {
+        const key = reviewer.author.login;
+        if (!response[key]) {
+            response[key] = Object.assign(Object.assign({}, reviewer), { count: 0 });
+        }
+        response[key].count += 1;
+    });
+    return Object.values(response);
+}
+function filterReviewersByState(reviewers, reviewersFullData) {
+    const response = {
+        requiredChanges: [],
+        approve: [],
+        commeted: [],
+    };
+    reviewers.forEach((reviewer) => {
+        const filter = reviewersFullData.filter((data) => data.author.login === reviewer.author.login);
+        const lastAction = filter[filter.length - 1];
+        switch (lastAction.state) {
+            case 'APPROVED':
+                response.approve.push(lastAction.author.login);
+                break;
+            case 'CHANGES_REQUESTED':
+                response.requiredChanges.push(lastAction.author.login);
+                break;
+            case 'COMMETED':
+                response.commeted.push(lastAction.author.login);
+                break;
+            default:
+        }
+    });
+    return response;
+}
 
 ;// CONCATENATED MODULE: ./src/actions/auto-merge.ts
 var auto_merge_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -34036,6 +34071,7 @@ var auto_merge_awaiter = (undefined && undefined.__awaiter) || function (thisArg
 
 
 function run() {
+    var _a;
     return auto_merge_awaiter(this, void 0, void 0, function* () {
         try {
             info('Staring PR auto merging.');
@@ -34056,10 +34092,24 @@ function run() {
                 repo,
                 pull_number: configInput.pullRequestNumber,
             });
+            info('Checking requested reviewers.');
+            if (pullRequest === null || pullRequest === void 0 ? void 0 : pullRequest.requested_reviewers) {
+                const requestedChanges = (_a = pullRequest === null || pullRequest === void 0 ? void 0 : pullRequest.requested_reviewers) === null || _a === void 0 ? void 0 : _a.map((reviewer) => reviewer.login);
+                if (requestedChanges.length > 0) {
+                    logger_warning(`Waiting [${requestedChanges.join(', ')}] to approve.`);
+                    return;
+                }
+            }
             info('Checking required changes status.');
-            // TODO fix TypeScript error
+            // TODO Fix Typescript Error
             // @ts-ignore
             const reviewers = yield getReviewsByGraphQL(pullRequest);
+            const reviewersByState = filterReviewersByState(removeDuplicateReviewer(reviewers), reviewers);
+            if (reviewersByState.requiredChanges.length) {
+                logger_warning(`${reviewersByState.requiredChanges.join(', ')} required changes.`);
+                return;
+            }
+            info(`${reviewersByState.approve.join(', ')} approved changes.`);
             info('Checking CI status.');
             const { data: checks } = yield client.checks.listForRef({
                 owner: configInput.owner,
@@ -34069,9 +34119,8 @@ function run() {
             const totalStatus = checks.total_count;
             const totalSuccessStatuses = checks.check_runs.filter((check) => check.conclusion === 'success' || check.conclusion === 'skipped').length;
             if (totalStatus - 1 !== totalSuccessStatuses) {
-                throw new Error(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} success`);
+                throw new Error(`Not all status success, ${totalSuccessStatuses} out of ${totalStatus - 1} (ignored this check) success`);
             }
-            info(JSON.stringify(reviewers, null, 2));
         }
         catch (err) {
             logger_error(err);

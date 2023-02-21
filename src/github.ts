@@ -3,7 +3,7 @@ import { context, getOctokit } from '@actions/github';
 import { getInput } from '@actions/core';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
 import { validateConfig } from './config';
-import { Config, Reviewer, State } from './config/typings';
+import { Config, Reviewer, ReviewerBySate } from './config/typings';
 import { debug, error, warning } from './logger';
 
 function getMyOctokit() {
@@ -237,4 +237,54 @@ export async function getReviewsByGraphQL(pr: PullRequest): Promise<Reviewer[]> 
     warning(err as Error);
     throw err;
   }
+}
+
+export function removeDuplicateReviewer(arr: Reviewer[]): Reviewer[] {
+  const response: {
+    [key: string]: Reviewer & { count: number };
+  } = {};
+  arr.forEach((reviewer) => {
+    const key = reviewer.author.login;
+    if (!response[key]) {
+      response[key] = { ...reviewer, count: 0 };
+    }
+
+    response[key].count += 1;
+  });
+  return Object.values(response);
+}
+
+export function filterReviewersByState(
+  reviewers: Reviewer[],
+  reviewersFullData: Reviewer[],
+): ReviewerBySate {
+  const response: ReviewerBySate = {
+    requiredChanges: [],
+    approve: [],
+    commeted: [],
+  };
+
+  reviewers.forEach((reviewer) => {
+    const filter = reviewersFullData.filter(
+      (data) => data.author.login === reviewer.author.login,
+    );
+
+    const lastAction = filter[filter.length - 1];
+
+    switch (lastAction.state) {
+      case 'APPROVED':
+        response.approve.push(lastAction.author.login);
+        break;
+
+      case 'CHANGES_REQUESTED':
+        response.requiredChanges.push(lastAction.author.login);
+        break;
+      case 'COMMETED':
+        response.commeted.push(lastAction.author.login);
+        break;
+      default:
+    }
+  });
+
+  return response;
 }

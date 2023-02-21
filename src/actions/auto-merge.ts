@@ -1,9 +1,13 @@
 import { inspect } from 'util';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { Inputs, Strategy, Reviewer } from '../config/typings';
-import { info, debug, error } from '../logger';
-import { getReviewsByGraphQL } from '../github';
+import { Inputs, Strategy, Reviewer, ReviewerBySate } from '../config/typings';
+import { info, debug, error, warning } from '../logger';
+import {
+  getReviewsByGraphQL,
+  removeDuplicateReviewer,
+  filterReviewersByState,
+} from '../github';
 
 export async function run(): Promise<void> {
   try {
@@ -30,12 +34,36 @@ export async function run(): Promise<void> {
       repo,
       pull_number: configInput.pullRequestNumber,
     });
+    info('Checking requested reviewers.');
+
+    if (pullRequest?.requested_reviewers) {
+      const requestedChanges = pullRequest?.requested_reviewers?.map(
+        (reviewer) => reviewer.login,
+      );
+
+      if (requestedChanges.length > 0) {
+        warning(`Waiting [${requestedChanges.join(', ')}] to approve.`);
+        return;
+      }
+    }
 
     info('Checking required changes status.');
 
-    // TODO fix TypeScript error
+    // TODO Fix Typescript Error
     // @ts-ignore
     const reviewers: Reviewer[] = await getReviewsByGraphQL(pullRequest);
+
+    const reviewersByState: ReviewerBySate = filterReviewersByState(
+      removeDuplicateReviewer(reviewers),
+      reviewers,
+    );
+
+    if (reviewersByState.requiredChanges.length) {
+      warning(`${reviewersByState.requiredChanges.join(', ')} required changes.`);
+      return;
+    }
+
+    info(`${reviewersByState.approve.join(', ')} approved changes.`);
 
     info('Checking CI status.');
 
@@ -54,11 +82,9 @@ export async function run(): Promise<void> {
       throw new Error(
         `Not all status success, ${totalSuccessStatuses} out of ${
           totalStatus - 1
-        } success`,
+        } (ignored this check) success`,
       );
     }
-
-    info(JSON.stringify(reviewers, null, 2));
   } catch (err) {
     error(err as Error);
   }
