@@ -1,9 +1,13 @@
 import { inspect } from 'util';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { Inputs, Strategy, Reviewer } from '../config/typings';
-import { info, debug, error } from '../logger';
-import { getReviewsByGraphQL } from '../github';
+import { Inputs, Strategy, ReviewerBySate, Reviewer } from '../config/typings';
+import { info, debug, warning, error } from '../logger';
+import {
+  getReviewsByGraphQL,
+  removeDuplicateReviewer,
+  filterReviewersByState,
+} from '../github';
 
 export async function run(): Promise<void> {
   try {
@@ -30,14 +34,80 @@ export async function run(): Promise<void> {
       repo,
       pull_number: configInput.pullRequestNumber,
     });
+    info('Checking requested reviewers.');
+
+    if (pullRequest?.requested_reviewers) {
+      const requestedChanges = pullRequest?.requested_reviewers?.map(
+        (reviewer) => reviewer.login,
+      );
+
+      if (requestedChanges.length > 0) {
+        warning(`Waiting [${requestedChanges.join(', ')}] to approve.`);
+        return;
+      }
+    }
 
     info('Checking required changes status.');
 
-    // TODO fix typescipt error
+    // TODO Fix Typescript Error
     // @ts-ignore
     const reviewers: Reviewer[] = await getReviewsByGraphQL(pullRequest);
 
-    info(JSON.stringify(reviewers, null, 2));
+    const reviewersByState: ReviewerBySate = filterReviewersByState(
+      removeDuplicateReviewer(reviewers),
+      reviewers,
+    );
+
+    if (reviewersByState.requiredChanges.length) {
+      warning(`${reviewersByState.requiredChanges.join(', ')} required changes.`);
+      return;
+    }
+
+    info(`${reviewersByState.approve.join(', ')} approved changes.`);
+
+    info('Checking CI status.');
+
+    const { data: checks } = await client.checks.listForRef({
+      owner: configInput.owner,
+      repo: configInput.repo,
+      ref: configInput.sha,
+    });
+
+    const totalStatus = checks.total_count;
+    const totalSuccessStatuses = checks.check_runs.filter(
+      (check) => check.conclusion === 'success' || check.conclusion === 'skipped',
+    ).length;
+
+    if (totalStatus - 1 !== totalSuccessStatuses) {
+      throw new Error(
+        `Not all status success, ${totalSuccessStatuses} out of ${
+          totalStatus - 1
+        } (ignored this check) success`,
+      );
+    }
+
+    if (configInput.comment) {
+      const { data: resp } = await client.issues.createComment({
+        owner: configInput.owner,
+        repo: configInput.repo,
+        issue_number: configInput.pullRequestNumber,
+        body: configInput.comment,
+      });
+
+      debug(`Post comment ${inspect(configInput.comment)}`);
+      core.setOutput('commentID', resp.id);
+    }
+
+    info('Merging...');
+
+    await client.pulls.merge({
+      owner,
+      repo,
+      pull_number: configInput.pullRequestNumber,
+      merge_method: configInput.strategy,
+    });
+
+    core.setOutput('merged', true);
   } catch (err) {
     error(err as Error);
   }
