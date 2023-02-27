@@ -10703,7 +10703,7 @@ function run() {
                 ref: configInput.sha,
             });
             // @ts-ignore
-            if (isPrFullyApproved(configInput, pullRequest, reviews, checks)) {
+            if (!isPrFullyApproved(configInput, pullRequest, reviews, checks)) {
                 return;
             }
             if (configInput.comment) {

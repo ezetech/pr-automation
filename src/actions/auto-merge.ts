@@ -48,7 +48,7 @@ export async function run(): Promise<void> {
     });
 
     // @ts-ignore
-    if (isPrFullyApproved(configInput, pullRequest, reviews, checks)) {
+    if (!isPrFullyApproved(configInput, pullRequest, reviews, checks)) {
       return;
     }
 
