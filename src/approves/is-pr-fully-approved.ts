@@ -14,7 +14,7 @@ export function isPrFullyApproved(
   reviews: PullsGetReviewResponseData[],
   checks: Checks,
 ): boolean {
-  let isMergeable = true;
+  let isMergeable = false;
 
   if (
     configInput.doNotMergeLabels &&

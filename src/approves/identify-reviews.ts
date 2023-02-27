@@ -65,8 +65,6 @@ export function checkReviewersRequiredChanges(reviews: PullsGetReviewResponseDat
     getReviewersLastReviews(reviews),
   );
 
-  info(JSON.stringify(reviewersByState, null, 2));
-
   if (reviewersByState.requiredChanges.length || reviewersByState.commented.length) {
     warning(
       `${reviewersByState.requiredChanges.join(

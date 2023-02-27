@@ -10595,7 +10595,6 @@ function checkRequestedReviewers(requestedReviewers) {
 }
 function checkReviewersRequiredChanges(reviews) {
     const reviewersByState = filterReviewersByState(getReviewersLastReviews(reviews));
-    info(JSON.stringify(reviewersByState, null, 2));
     if (reviewersByState.requiredChanges.length || reviewersByState.commented.length) {
         warning(`${reviewersByState.requiredChanges.join(', ')} don't approved or commented changes.`);
         return false;
@@ -10641,7 +10640,7 @@ function checkDoNotMergeLabels(labels, doNotMergeLabels) {
 
 
 function isPrFullyApproved(configInput, pullRequest, reviews, checks) {
-    let isMergeable = true;
+    let isMergeable = false;
     if (configInput.doNotMergeLabels &&
         !checkDoNotMergeLabels(pullRequest.labels, configInput.doNotMergeLabels)) {
         return false;
