@@ -21,19 +21,28 @@ export type Config = {
   postReviewOptions?: {};
 };
 
-export type ReviewerBySate = {
+export type ReviewerByState = {
   requiredChanges: string[];
   approve: string[];
-  commeted: string[];
+  commented: string[];
 };
 
-export type State = 'CHANGES_REQUESTED' | 'APPROVED' | 'COMMETED';
+export type State = 'CHANGES_REQUESTED' | 'APPROVED' | 'COMMENTED';
 
 export type Author = {
   login: string;
 };
 
 export type Strategy = 'merge' | 'squash' | 'rebase';
+
+export type Checks = {
+  total_count: number;
+  check_runs: {
+    name: string;
+    status: string;
+    conclusion: string;
+  }[];
+};
 
 export interface Inputs {
   comment: string;
@@ -43,10 +52,12 @@ export interface Inputs {
   sha: string;
   strategy: Strategy;
   token: string;
+  doNotMergeLabels: string;
 }
 
 export interface Reviewer {
   author: Author;
+  user: Author;
   state: State;
   body: string;
   createdAt?: Date;
