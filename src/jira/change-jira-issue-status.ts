@@ -1,5 +1,4 @@
 import { Inputs, JiraIssue, JiraTransitions } from '../config/typings';
-import { info } from '../logger';
 import { getIssueIdFromBranchName, jiraClient, getTransitionId } from './jira';
 
 type Response = {
@@ -26,9 +25,6 @@ export default async function changeJiraIssueStatus(
     `${configInput.jiraEndpoint}/rest/api/3/issue/${issueId}`,
   );
 
-  info(`Issue detail:`);
-  info(JSON.stringify(issueDetail, null, 2));
-
   if (issueDetail === undefined) {
     return {
       status: false,
@@ -52,9 +48,6 @@ export default async function changeJiraIssueStatus(
     `${configInput.jiraEndpoint}/rest/api/3/issue/${issueId}/transitions`,
   );
 
-  info(`Available transitions:`);
-  info(JSON.stringify(availableTransitions, null, 2));
-
   if (availableTransitions === undefined) {
     return {
       status: false,
@@ -66,8 +59,6 @@ export default async function changeJiraIssueStatus(
     availableTransitions.transitions,
     configInput.jiraMoveIssueTo,
   );
-
-  info(`Transition id: ${transitionId}`);
 
   if (!transitionId) {
     return {
