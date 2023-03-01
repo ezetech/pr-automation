@@ -31,6 +31,22 @@ inputs:
     required: false
     description: 'Merge strategy'
     default: 'merge'
+  jira-token:
+    required: true
+    description: 'Jira Token'
+  jira-account:
+    required: true
+    description: 'Jira Account'
+  jira-endpoint:
+    required: true
+    description: 'Jira EndPoint'
+  jira-move-issue-from:
+    required: true
+    description: 'Move Issue From'
+  jira-move-issue-to:
+    required: true
+    description: 'Move Issue To'
+
 runs:
   using: 'node16'
   main: 'dist/auto-merge.js'
