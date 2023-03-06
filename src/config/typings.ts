@@ -56,6 +56,7 @@ export interface Inputs {
   token: string;
   doNotMergeLabels: string;
   config: string;
+  doNotMergeOnBaseBranch: string;
 }
 
 export interface Reviewer {

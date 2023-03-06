@@ -35,6 +35,10 @@ inputs:
     required: false
     description: 'Merge strategy'
     default: 'merge'
+  do-not-merge-on-base-branch:
+    required: false
+    description: ''
+    default: ''
 runs:
   using: 'node16'
   main: 'dist/auto-merge.js'

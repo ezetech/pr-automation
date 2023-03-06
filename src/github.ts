@@ -94,6 +94,7 @@ export function getInputs(): Inputs {
     doNotMergeLabels: getInput('do-not-merge-labels'),
     token: getInput('token', { required: true }),
     config: getInput('config', { required: true }),
+    doNotMergeOnBaseBranch: getInput('do-not-merge-on-base-branch'),
   };
 }
 
@@ -282,20 +283,22 @@ export async function mergePullRequest(
   const octokit = getMyOctokit();
   const inputs = getInputs();
 
-  if (pr.baseBranchName !== 'master' && pr.baseBranchName !== 'main') {
-    const response = await octokit.pulls.merge({
-      owner: inputs.owner,
-      repo: inputs.repo,
-      pull_number: inputs.pullRequestNumber,
-      merge_method: inputs.strategy,
-    });
+  const doNotMergeBaseBranch = inputs.doNotMergeOnBaseBranch.split(',');
 
-    if (response.status !== 200) {
-      throw new Error(`Failed to create comment: ${response.status}`);
-    }
-
-    return response.data;
+  if (doNotMergeBaseBranch.includes(pr.baseBranchName)) {
+    return null;
   }
 
-  return null;
+  const response = await octokit.pulls.merge({
+    owner: inputs.owner,
+    repo: inputs.repo,
+    pull_number: inputs.pullRequestNumber,
+    merge_method: inputs.strategy,
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`Failed to create comment: ${response.status}`);
+  }
+
+  return response.data;
 }

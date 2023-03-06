@@ -35130,6 +35130,7 @@ function getInputs() {
         doNotMergeLabels: (0,core.getInput)('do-not-merge-labels'),
         token: (0,core.getInput)('token', { required: true }),
         config: (0,core.getInput)('config', { required: true }),
+        doNotMergeOnBaseBranch: (0,core.getInput)('do-not-merge-on-base-branch'),
     };
 }
 function fetchConfig() {
@@ -35287,19 +35288,20 @@ function mergePullRequest(pr) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
         const inputs = getInputs();
-        if (pr.baseBranchName !== 'master' && pr.baseBranchName !== 'main') {
-            const response = yield octokit.pulls.merge({
-                owner: inputs.owner,
-                repo: inputs.repo,
-                pull_number: inputs.pullRequestNumber,
-                merge_method: inputs.strategy,
-            });
-            if (response.status !== 200) {
-                throw new Error(`Failed to create comment: ${response.status}`);
-            }
-            return response.data;
+        const doNotMergeBaseBranch = inputs.doNotMergeOnBaseBranch.split(',');
+        if (doNotMergeBaseBranch.includes(pr.baseBranchName)) {
+            return null;
         }
-        return null;
+        const response = yield octokit.pulls.merge({
+            owner: inputs.owner,
+            repo: inputs.repo,
+            pull_number: inputs.pullRequestNumber,
+            merge_method: inputs.strategy,
+        });
+        if (response.status !== 200) {
+            throw new Error(`Failed to create comment: ${response.status}`);
+        }
+        return response.data;
     });
 }
 
