@@ -1,52 +1,18 @@
-import { PullsGetResponseData } from '@octokit/types';
 import { Checks } from '../config/typings';
 
-import { warning, info } from '../logger';
+export function areCIChecksPassed(checks: Checks, requiredChecks: string[] | undefined) {
+  if (requiredChecks === undefined) {
+    return true;
+  }
 
-export function checkCI(checks: Checks): boolean {
-  info(JSON.stringify(checks, null, 2));
+  for (const name of requiredChecks) {
+    const check = checks.check_runs.find((checkRun) => {
+      return checkRun.name === name;
+    });
 
-  const totalInProgress = checks.check_runs.filter((check) => {
-    if (check.status === 'in_progress' && check.conclusion === null) {
-      return true;
+    if (check && (check.status !== 'completed' || check.conclusion !== 'success')) {
+      return `Waiting for "${name}" CI check to pass.`;
     }
-  }).length;
-
-  if (totalInProgress > 1) {
-    warning(`Waiting for ${totalInProgress - 1} CI checks to finish.`);
-
-    return false;
-  }
-
-  const totalStatus = checks.total_count;
-  const totalSuccess = checks.check_runs.filter(
-    (check) => check.conclusion === 'success' || check.conclusion === 'skipped',
-  ).length;
-
-  if (totalStatus - 1 !== totalSuccess) {
-    warning(
-      `Not all status success, ${totalSuccess} out of ${
-        totalStatus - 1
-      } (ignored this check) success`,
-    );
-    return false;
-  }
-
-  return true;
-}
-
-export function checkDoNotMergeLabels(
-  labels: PullsGetResponseData['labels'],
-  doNotMergeLabels: string,
-): boolean {
-  const doNotMergeLabelsList = doNotMergeLabels.split(',');
-  const check = labels.find((label) => {
-    return doNotMergeLabelsList.includes(label.name);
-  });
-
-  if (check) {
-    warning(`Pull request has a ${doNotMergeLabels} label.`);
-    return false;
   }
 
   return true;

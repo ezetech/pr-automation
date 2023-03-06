@@ -1,33 +1,34 @@
-import { PullsGetReviewResponseData, PullsGetResponseData } from '@octokit/types';
-import { Checks, Inputs } from '../config/typings';
+import { Rule, Reviews, Checks } from '../config/typings';
+import { warning } from '../logger';
+import { checkReviewersRequiredChanges } from './identify-reviews';
+import { areCIChecksPassed } from './identify-ci';
 
-import {
-  checkReviewersRequiredChanges,
-  checkRequestedReviewers,
-} from './identify-reviews';
+type Params = {
+  rules: Rule[];
+  requiredChecks: string[] | undefined;
+  checks: Checks;
+  reviews: Reviews;
+};
 
-import { checkCI, checkDoNotMergeLabels } from './identify-ci';
+export function isPrFullyApproved({
+  rules,
+  requiredChecks,
+  checks,
+  reviews,
+}: Params): boolean {
+  const checkCIChecks = areCIChecksPassed(checks, requiredChecks);
 
-export function isPrFullyApproved(
-  configInput: Inputs,
-  pullRequest: PullsGetResponseData,
-  reviews: PullsGetReviewResponseData[],
-  checks: Checks,
-): boolean {
-  let isMergeable = false;
-
-  if (
-    configInput.doNotMergeLabels &&
-    !checkDoNotMergeLabels(pullRequest.labels, configInput.doNotMergeLabels)
-  ) {
+  if (checkCIChecks !== true) {
+    warning(checkCIChecks);
     return false;
   }
 
-  isMergeable = checkRequestedReviewers(pullRequest.requested_reviewers);
+  const checkReviewers = checkReviewersRequiredChanges(reviews, rules);
 
-  isMergeable = checkReviewersRequiredChanges(reviews);
+  if (checkReviewers !== true) {
+    warning(checkReviewers);
+    return false;
+  }
 
-  isMergeable = checkCI(checks);
-
-  return isMergeable;
+  return true;
 }
