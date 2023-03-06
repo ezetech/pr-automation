@@ -7,6 +7,10 @@ inputs:
   token:
     required: true
     description: 'GitHub Token'
+  config:
+    required: true
+    description: 'Config Files'
+    default: ''
   comment:
     required: false
     description: 'Comment before merge'
