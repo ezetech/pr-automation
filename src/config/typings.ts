@@ -1,3 +1,5 @@
+import { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/parameters-and-response-types';
+
 export type Rule = {
   reviewers: string[];
   required: number;
@@ -11,6 +13,7 @@ export type DefaultRules = {
 
 type Options = {
   ignoredLabels: string[];
+  requiredChecks?: string[];
 };
 
 export type Config = {
@@ -35,14 +38,13 @@ export type Author = {
 
 export type Strategy = 'merge' | 'squash' | 'rebase';
 
-export type Checks = {
-  total_count: number;
-  check_runs: {
-    name: string;
-    status: string;
-    conclusion: string;
-  }[];
+export type FunctionResponse = {
+  status: boolean;
+  message?: string;
 };
+
+export type Reviews = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];
+export type Checks = RestEndpointMethodTypes['checks']['listForRef']['response']['data'];
 
 export interface Inputs {
   comment: string;
@@ -53,6 +55,7 @@ export interface Inputs {
   strategy: Strategy;
   token: string;
   doNotMergeLabels: string;
+  config: string;
 }
 
 export interface Reviewer {

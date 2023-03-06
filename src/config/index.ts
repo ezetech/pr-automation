@@ -5,6 +5,7 @@ const schema = Joi.object<Config>()
   .keys({
     options: Joi.object({
       ignoredLabels: Joi.array().items(Joi.string()),
+      requiredChecks: Joi.array().items(Joi.string()),
     }).optional(),
     defaultRules: Joi.object({
       byFileGroups: Joi.object().pattern(
