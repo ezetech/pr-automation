@@ -1,8 +1,7 @@
 import * as core from '@actions/core';
 import * as github from '../github';
 import { info, error, warning } from '../logger';
-import { isPrFullyApproved } from '../approves/is-pr-fully-approved';
-import { identifyReviewers } from '../approves/identify-approvers';
+import { isPrFullyApproved, identifyReviewers } from '../approves';
 import { identifyFileChangeGroups } from '../reviewer';
 
 export async function run(): Promise<void> {

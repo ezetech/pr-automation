@@ -35305,6 +35305,20 @@ function mergePullRequest(pr) {
     });
 }
 
+;// CONCATENATED MODULE: ./src/utils.ts
+
+function getRandomItemFromArray(items) {
+    return items[Math.floor(Math.random() * items.length)];
+}
+function withDebugLog(executeFunction) {
+    return function (param) {
+        debug(`[${executeFunction.name}]. Params: ${JSON.stringify(param)}`);
+        const result = executeFunction(param);
+        debug(`[${executeFunction.name}]. Result: ${JSON.stringify(result)}`);
+        return result;
+    };
+}
+
 ;// CONCATENATED MODULE: ./src/approves/identify-reviews.ts
 function getReviewersLastReviews(listReviews) {
     const response = {};
@@ -35493,19 +35507,12 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
     return [...result];
 }
 
-;// CONCATENATED MODULE: ./src/utils.ts
+;// CONCATENATED MODULE: ./src/approves/index.ts
 
-function getRandomItemFromArray(items) {
-    return items[Math.floor(Math.random() * items.length)];
-}
-function withDebugLog(executeFunction) {
-    return function (param) {
-        debug(`[${executeFunction.name}]. Params: ${JSON.stringify(param)}`);
-        const result = executeFunction(param);
-        debug(`[${executeFunction.name}]. Result: ${JSON.stringify(result)}`);
-        return result;
-    };
-}
+
+
+const approves_identifyReviewers = withDebugLog(identifyReviewers);
+const approves_isPrFullyApproved = withDebugLog(isPrFullyApproved);
 
 // EXTERNAL MODULE: ./node_modules/minimatch/minimatch.js
 var minimatch = __nccwpck_require__(3973);
@@ -35655,7 +35662,6 @@ var auto_merge_awaiter = (undefined && undefined.__awaiter) || function (thisArg
 
 
 
-
 function run() {
     var _a;
     return auto_merge_awaiter(this, void 0, void 0, function* () {
@@ -35686,7 +35692,7 @@ function run() {
                 fileChangesGroups: config.fileChangesGroups,
                 changedFiles,
             });
-            const rules = identifyReviewers({
+            const rules = approves_identifyReviewers({
                 createdBy: author,
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
@@ -35695,7 +35701,7 @@ function run() {
             });
             const checks = yield getCIChecks();
             const reviews = yield getReviews();
-            if (!isPrFullyApproved({
+            if (!approves_isPrFullyApproved({
                 rules,
                 requiredChecks: (_a = config === null || config === void 0 ? void 0 : config.options) === null || _a === void 0 ? void 0 : _a.requiredChecks,
                 reviews,
