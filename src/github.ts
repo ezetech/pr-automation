@@ -2,9 +2,10 @@ import * as yaml from 'yaml';
 import { context, getOctokit } from '@actions/github';
 import { getInput } from '@actions/core';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
+import { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/parameters-and-response-types';
 import { validateConfig } from './config';
-import { Config, Reviewer, ReviewerByState } from './config/typings';
-import { debug, error, warning, info } from './logger';
+import { Config, Inputs, Strategy, Reviews, Checks } from './config/typings';
+import { debug, error, warning } from './logger';
 
 function getMyOctokit() {
   const myToken = getInput('token');
@@ -27,11 +28,24 @@ class PullRequest {
     return Boolean(this._pr.draft);
   }
 
+  get isOpen(): boolean {
+    return this._pr.state === 'open';
+  }
+
   get number(): number {
     return this._pr.number;
   }
+
   get labelNames(): string[] {
     return (this._pr.labels as { name: string }[]).map((label) => label.name);
+  }
+
+  get branchName(): string {
+    return this._pr.head.ref;
+  }
+
+  get baseBranchName(): string {
+    return this._pr.base.ref;
   }
 
   get requestedReviewerLogins(): string[] {
@@ -49,6 +63,38 @@ export function getPullRequest(): PullRequest {
   }
   debug(`PR event payload: ${JSON.stringify(pr)}`);
   return new PullRequest(pr);
+}
+
+export function validatePullRequest(pr: PullRequest): string | null {
+  if (pr.isDraft) {
+    return `Pull request #${pr.number} is a draft`;
+  }
+
+  if (!pr.isOpen) {
+    return `Pull request #${pr.number} is not open`;
+  }
+
+  if (doesContainIgnoreMergeLabels(pr.labelNames)) {
+    return `Pull request #${pr.number} contains ignore merge labels`;
+  }
+
+  return null;
+}
+
+export function getInputs(): Inputs {
+  const [owner, repo] = getInput('repository').split('/');
+
+  return {
+    comment: getInput('comment'),
+    owner,
+    repo,
+    pullRequestNumber: Number(getInput('pullRequestNumber', { required: true })),
+    sha: getInput('sha', { required: true }),
+    strategy: getInput('strategy', { required: true }) as Strategy,
+    doNotMergeLabels: getInput('do-not-merge-labels'),
+    token: getInput('token', { required: true }),
+    config: getInput('config', { required: true }),
+  };
 }
 
 export async function fetchConfig(): Promise<Config> {
@@ -160,87 +206,96 @@ export async function getLatestCommitDate(pr: PullRequest): Promise<{
   }
 }
 
-export type Reviews = {
-  author: string;
-  state: string;
-  submittedAt: Date;
-};
-
-export async function getReviews(pr: PullRequest): Promise<Reviews[]> {
+export async function getReviews(): Promise<Reviews> {
   const octokit = getMyOctokit();
-  const reviews = await octokit.paginate(
-    'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews',
-    {
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      pull_number: pr.number,
-    },
-  );
-  return reviews.reduce<Reviews[]>((result, review) => {
-    // if (review.state !== 'APPROVED') {
-    //   return result;
-    // }
-    if (!review.user) {
-      warning(`No review.user provided for review ${review.id}`);
-      return result;
-    }
-    if (!review.submitted_at) {
-      warning(`No review.submitted_at provided for review ${review.id}`);
-      return result;
-    }
-    result.push({
-      state: review.state,
-      author: review.user.login,
-      submittedAt: new Date(review.submitted_at),
-    });
-    return result;
-  }, []);
+  const inputs = getInputs();
+
+  const response = await octokit.pulls.listReviews({
+    owner: inputs.owner,
+    repo: inputs.repo,
+    pull_number: inputs.pullRequestNumber,
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`Failed to get reviews: ${response.status}`);
+  }
+
+  return response.data;
 }
 
-export async function getReviewsByGraphQL(pr: PullRequest): Promise<Reviewer[]> {
+export async function getCIChecks(): Promise<Checks> {
   const octokit = getMyOctokit();
-  try {
-    let hasNextPage = true;
-    let reviewsParam = 'last: 100';
-    let response: Reviewer[] = [];
+  const inputs = getInputs();
 
-    do {
-      const queryResult = await octokit.graphql<any>(`
-      {
-        repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-          pullRequest(number: ${pr.number}) {
-            reviews(${reviewsParam}) {
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-              nodes {
-                author {
-                  login
-                }
-                state
-                body
-                createdAt
-                updatedAt
-              }  
-            }
-          }
-        }
-      }
-    `);
-      const reviewsResponse = queryResult.repository.pullRequest.reviews;
+  const response = await octokit.checks.listForRef({
+    owner: inputs.owner,
+    repo: inputs.repo,
+    ref: inputs.sha,
+  });
 
-      info('--------------- reviewsResponse ------------------');
-      info(JSON.stringify(reviewsResponse, null, 2));
-
-      response = [...reviewsResponse.nodes, ...response];
-      hasNextPage = reviewsResponse.pageInfo.hasNextPage;
-      reviewsParam = `last: 100, after: ${reviewsResponse.pageInfo.endCursor}`;
-    } while (hasNextPage);
-
-    return response;
-  } catch (err) {
-    warning(err as Error);
-    throw err;
+  if (response.status !== 200) {
+    throw new Error(`Failed to get CI checks: ${response.status}`);
   }
+
+  return response.data;
+}
+
+export async function createComment(
+  comment: string,
+): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
+  const octokit = getMyOctokit();
+  const inputs = getInputs();
+
+  const response = await octokit.issues.createComment({
+    owner: inputs.owner,
+    repo: inputs.repo,
+    issue_number: inputs.pullRequestNumber,
+    body: comment,
+  });
+
+  if (response.status !== 201) {
+    throw new Error(`Failed to create comment: ${response.status}`);
+  }
+
+  return response.data;
+}
+
+export function doesContainIgnoreMergeLabels(labels: string[]): boolean {
+  const inputs = getInputs();
+
+  const doNotMergeLabelsList = inputs.doNotMergeLabels.split(',');
+
+  const check = labels.find((label) => {
+    return doNotMergeLabelsList.includes(label);
+  });
+
+  if (check) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function mergePullRequest(
+  pr: PullRequest,
+): Promise<RestEndpointMethodTypes['pulls']['merge']['response']['data'] | null> {
+  const octokit = getMyOctokit();
+  const inputs = getInputs();
+
+  if (pr.baseBranchName !== 'master' && pr.baseBranchName !== 'main') {
+    const response = await octokit.pulls.merge({
+      owner: inputs.owner,
+      repo: inputs.repo,
+      pull_number: inputs.pullRequestNumber,
+      merge_method: inputs.strategy,
+    });
+
+    if (response.status !== 200) {
+      throw new Error(`Failed to create comment: ${response.status}`);
+    }
+
+    return response.data;
+  }
+
+  return null;
 }
