@@ -47,7 +47,7 @@ const reviewsTemplate: Reviews[0] = {
   commit_id: 'abc',
 };
 
-function generateReviewsExample(login: string, state: State): Reviews[0] {
+function generateReviewsExampleData(login: string, state: State): Reviews[0] {
   const reviewsExample = JSON.parse(JSON.stringify(reviewsTemplate));
 
   const result: Reviews[0] = {
@@ -69,13 +69,13 @@ describe('should test getReviewersLastReviews: ', () => {
 
   it('should return "APPROVED" array', () => {
     const result = getReviewersLastReviews([
-      generateReviewsExample('test', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test', 'APPROVED'),
+      generateReviewsExampleData('test', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test', 'APPROVED'),
     ]);
 
     expect(result).to.deep.equal([
       {
-        ...generateReviewsExample('test', 'APPROVED'),
+        ...generateReviewsExampleData('test', 'APPROVED'),
         total_review: 2,
       },
     ]);
@@ -83,18 +83,18 @@ describe('should test getReviewersLastReviews: ', () => {
 
   it('should return Reviewers last reviews', () => {
     const result = getReviewersLastReviews([
-      generateReviewsExample('test1', 'APPROVED'),
-      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
     ]);
 
     expect(result).to.deep.equal([
       {
-        ...generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+        ...generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
         total_review: 2,
       },
       {
-        ...generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+        ...generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
         total_review: 1,
       },
     ]);
@@ -112,9 +112,9 @@ describe('should test filterReviewersByState: ', () => {
 
   it('should return reviewers who required changes PR', () => {
     const getLastReviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'APPROVED'),
-      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
     ]);
 
     const result = filterReviewersByState(getLastReviews);
@@ -128,9 +128,9 @@ describe('should test filterReviewersByState: ', () => {
 
   it('should return reviewers who required changes and approve PR', () => {
     const getLastReviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test1', 'APPROVED'),
-      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
     ]);
 
     const result = filterReviewersByState(getLastReviews);
@@ -144,10 +144,10 @@ describe('should test filterReviewersByState: ', () => {
 
   it('should return reviewers who required changes, approve and commented PR', () => {
     const getLastReviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test1', 'APPROVED'),
-      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test3', 'COMMENTED'),
+      generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test3', 'COMMENTED'),
     ]);
 
     const result = filterReviewersByState(getLastReviews);
@@ -169,10 +169,10 @@ describe('should test checkReviewersRequiredChanges: ', () => {
 
   it('should return error message if reviewer required changes', () => {
     const reviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test1', 'APPROVED'),
-      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test3', 'APPROVED'),
+      generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test3', 'APPROVED'),
     ]);
 
     const result = checkReviewersRequiredChanges({
@@ -190,9 +190,9 @@ describe('should test checkReviewersRequiredChanges: ', () => {
 
   it('should return error message if reviewers required changes', () => {
     const reviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
-      generateReviewsExample('test3', 'APPROVED'),
+      generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExampleData('test3', 'APPROVED'),
     ]);
 
     const result = checkReviewersRequiredChanges({
@@ -210,7 +210,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
 
   it('should return true if list one reviewer approve and no one required changes', () => {
     const reviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
     ]);
 
     const result = checkReviewersRequiredChanges({
@@ -228,8 +228,8 @@ describe('should test checkReviewersRequiredChanges: ', () => {
 
   it('should return true if list two reviewer approve and no one required changes', () => {
     const reviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'APPROVED'),
-      generateReviewsExample('test2', 'APPROVED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test2', 'APPROVED'),
     ]);
 
     const result = checkReviewersRequiredChanges({
@@ -247,7 +247,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
 
   it("should return error message if all required reviewer don't approve yet", () => {
     const reviews = getReviewersLastReviews([
-      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExampleData('test1', 'APPROVED'),
     ]);
 
     const result = checkReviewersRequiredChanges({
@@ -260,6 +260,6 @@ describe('should test checkReviewersRequiredChanges: ', () => {
       ],
     });
 
-    expect(result).to.equal('Waiting 2 reviews from test1, test2, test3 to approve.');
+    expect(result).to.equal('Waiting 2 approve(s) from test1, test2, test3 to approve.');
   });
 });

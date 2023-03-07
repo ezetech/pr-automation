@@ -35492,7 +35492,7 @@ function checkReviewersRequiredChanges({ reviews, rules, }) {
                 return reviewersByState.approve.includes(reviewer);
             });
             if (requiredReviewers.length < role.required) {
-                return `Waiting ${role.required} reviews from ${role.reviewers.join(', ')} to approve.`;
+                return `Waiting ${role.required} approve(s) from ${role.reviewers.join(', ')} to approve.`;
             }
         }
     }

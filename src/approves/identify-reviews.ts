@@ -91,7 +91,7 @@ export function checkReviewersRequiredChanges({
       });
 
       if (requiredReviewers.length < role.required) {
-        return `Waiting ${role.required} reviews from ${role.reviewers.join(
+        return `Waiting ${role.required} approve(s) from ${role.reviewers.join(
           ', ',
         )} to approve.`;
       }

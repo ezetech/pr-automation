@@ -137,7 +137,7 @@ const checksExampleTemplate: Checks['check_runs'][0] = {
   ],
 };
 
-function generateChecksExample(
+function generateChecksExampleData(
   name: string,
   status: 'in_progress' | 'queued' | 'completed',
   conclusion:
@@ -174,9 +174,9 @@ describe('should test areCIChecksPassed: ', () => {
   const checks: Checks = {
     total_count: 3,
     check_runs: [
-      generateChecksExample('test', 'in_progress', null),
-      generateChecksExample('test 2', 'completed', 'success'),
-      generateChecksExample('test 3', 'completed', 'timed_out'),
+      generateChecksExampleData('test', 'in_progress', null),
+      generateChecksExampleData('test 2', 'completed', 'success'),
+      generateChecksExampleData('test 3', 'completed', 'timed_out'),
     ],
   };
 
