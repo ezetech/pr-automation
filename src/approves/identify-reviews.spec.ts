@@ -1,293 +1,265 @@
 import { expect } from 'chai';
-import { PullsGetResponseData, PullsGetReviewResponseData } from '@octokit/types';
+import { Reviews, State, ReviewerByState } from '../config/typings';
+
 import {
-  checkRequestedReviewers,
-  checkReviewersRequiredChanges,
   getReviewersLastReviews,
   filterReviewersByState,
-} from './identify-reviews';
+  checkReviewersRequiredChanges,
+} from './';
 
-const requested_reviewers: PullsGetResponseData['requested_reviewers'] = [
-  {
-    login: 'user',
-    id: 7796684,
-    node_id: 'MDQ6VXNlcjc3OTY2ODQ=',
-    avatar_url: 'https://avatars.githubusercontent.com/u/7796684?v=4',
-    gravatar_id: '',
-    url: 'https://api.github.com/users/lasha3044',
-    html_url: 'https://github.com/lasha3044',
-    followers_url: 'https://api.github.com/users/lasha3044/followers',
-    following_url: 'https://api.github.com/users/lasha3044/following{/other_user}',
-    gists_url: 'https://api.github.com/users/lasha3044/gists{/gist_id}',
-    starred_url: 'https://api.github.com/users/lasha3044/starred{/owner}{/repo}',
-    subscriptions_url: 'https://api.github.com/users/lasha3044/subscriptions',
-    organizations_url: 'https://api.github.com/users/lasha3044/orgs',
-    repos_url: 'https://api.github.com/users/lasha3044/repos',
-    events_url: 'https://api.github.com/users/lasha3044/events{/privacy}',
-    received_events_url: 'https://api.github.com/users/lasha3044/received_events',
+const reviewsTemplate: Reviews[0] = {
+  id: 123456789,
+  node_id: 'abc',
+  user: {
+    login: 'test',
+    id: 123456789,
+    node_id: 'abc',
+    avatar_url: 'https://avatars.test.com/u/123456789?v=4',
+    url: 'http://api.test.com/users/test',
+    html_url: 'http://test.com/test',
+    gists_url: 'http://api.test.com/users/test/gists{/gist_id}',
+    gravatar_id: 'abc',
+    followers_url: 'http://api.test.com/users/test/followers',
+    following_url: 'http://api.test.com/users/test/following{/other_user}',
+    starred_url: 'http://api.test.com/users/test/starred{/owner}{/repo}',
+    subscriptions_url: 'http://api.test.com/users/test/subscriptions',
+    organizations_url: 'http://api.test.com/users/test/orgs',
+    repos_url: 'http://api.test.com/users/test/repos',
+    events_url: 'http://api.test.com/users/test/events{/privacy}',
+    received_events_url: 'http://api.test.com/users/test/received_events',
     type: 'User',
     site_admin: false,
   },
-];
-
-describe('should test checkRequestedReviewers:', () => {
-  it('should return true if there are no requested reviewers', () => {
-    const result = checkRequestedReviewers([]);
-
-    expect(result).to.be.equal(true);
-  });
-
-  it('should return false if there are requested reviewers', () => {
-    const result = checkRequestedReviewers(requested_reviewers);
-
-    expect(result).to.be.equal(false);
-  });
-});
-
-describe('should test checkReviewersRequiredChanges:', () => {
-  const reviewers: PullsGetReviewResponseData[] = [
-    {
-      id: 1315528639,
-      node_id: 'PRR_kwDOI96fUM5OaV-_',
-      user: {
-        login: 'user1',
-        id: 125407394,
-        node_id: 'U_kgDOB3mQog',
-        avatar_url: 'https://avatars.githubusercontent.com/u/125407394?v=4',
-        gravatar_id: '',
-        url: 'https://api.github.com/users/lashapetriashvili-ezetech',
-        html_url: 'https://github.com/lashapetriashvili-ezetech',
-        followers_url: 'https://api.github.com/users/lashapetriashvili-ezetech/followers',
-        following_url:
-          'https://api.github.com/users/lashapetriashvili-ezetech/following{/other_user}',
-        gists_url:
-          'https://api.github.com/users/lashapetriashvili-ezetech/gists{/gist_id}',
-        starred_url:
-          'https://api.github.com/users/lashapetriashvili-ezetech/starred{/owner}{/repo}',
-        subscriptions_url:
-          'https://api.github.com/users/lashapetriashvili-ezetech/subscriptions',
-        organizations_url: 'https://api.github.com/users/lashapetriashvili-ezetech/orgs',
-        repos_url: 'https://api.github.com/users/lashapetriashvili-ezetech/repos',
-        events_url:
-          'https://api.github.com/users/lashapetriashvili-ezetech/events{/privacy}',
-        received_events_url:
-          'https://api.github.com/users/lashapetriashvili-ezetech/received_events',
-        type: 'User',
-        site_admin: false,
-      },
-      body: '',
-      state: 'CHANGES_REQUESTED',
-      html_url:
-        'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-      pull_request_url:
-        'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-      _links: {
-        html: {
-          href: 'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-        },
-        pull_request: {
-          href: 'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-        },
-      },
-      submitted_at: '2023-02-27T12:58:15Z',
-      commit_id: '09b386f1e69bca76c45b2ed692e89ed6546ba8b6',
+  body: 'test',
+  state: 'CHANGES_REQUESTED',
+  html_url: 'http://test.com/pull/80#pullrequestreview-1327365830',
+  pull_request_url: 'http://api.test.com/repos/test/test/pulls/1234',
+  author_association: 'COLLABORATOR',
+  _links: {
+    html: {
+      href: 'http://test.com/pull/80#pullrequestreview-123456789',
     },
-  ];
-
-  it('should return true if there are no reviewers', () => {
-    const result = checkReviewersRequiredChanges([]);
-
-    expect(result).to.be.equal(true);
-  });
-
-  it('should return false if there are reviewer and it\'s state equal "CHANGES_REQUESTED', () => {
-    const result = checkReviewersRequiredChanges(reviewers);
-
-    expect(result).to.be.equal(false);
-  });
-});
-
-const reviewers: PullsGetReviewResponseData[] = [
-  {
-    id: 1315528641,
-    node_id: 'PRR_kwDOI96fUM5OaV-_',
-    user: {
-      login: 'user1',
-      id: 125407394,
-      node_id: 'U_kgDOB3mQog',
-      avatar_url: 'https://avatars.githubusercontent.com/u/125407394?v=4',
-      gravatar_id: '',
-      url: 'https://api.github.com/users/lashapetriashvili-ezetech',
-      html_url: 'https://github.com/lashapetriashvili-ezetech',
-      followers_url: 'https://api.github.com/users/lashapetriashvili-ezetech/followers',
-      following_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/following{/other_user}',
-      gists_url: 'https://api.github.com/users/lashapetriashvili-ezetech/gists{/gist_id}',
-      starred_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/starred{/owner}{/repo}',
-      subscriptions_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/subscriptions',
-      organizations_url: 'https://api.github.com/users/lashapetriashvili-ezetech/orgs',
-      repos_url: 'https://api.github.com/users/lashapetriashvili-ezetech/repos',
-      events_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/events{/privacy}',
-      received_events_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/received_events',
-      type: 'User',
-      site_admin: false,
+    pull_request: {
+      href: 'http://api.test.com/repos/test/test/pulls/123456789',
     },
-    body: '',
-    state: 'CHANGES_REQUESTED',
-    html_url:
-      'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-    pull_request_url:
-      'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-    _links: {
-      html: {
-        href: 'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-      },
-      pull_request: {
-        href: 'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-      },
-    },
-    submitted_at: '2023-02-27T12:58:15Z',
-    commit_id: '09b386f1e69bca76c45b2ed692e89ed6546ba8b6',
   },
-  {
-    id: 1315528640,
-    node_id: 'PRR_kwDOI96fUM5OaV-_',
-    user: {
-      login: 'user2',
-      id: 125407394,
-      node_id: 'U_kgDOB3mQog',
-      avatar_url: 'https://avatars.githubusercontent.com/u/125407394?v=4',
-      gravatar_id: '',
-      url: 'https://api.github.com/users/lashapetriashvili-ezetech',
-      html_url: 'https://github.com/lashapetriashvili-ezetech',
-      followers_url: 'https://api.github.com/users/lashapetriashvili-ezetech/followers',
-      following_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/following{/other_user}',
-      gists_url: 'https://api.github.com/users/lashapetriashvili-ezetech/gists{/gist_id}',
-      starred_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/starred{/owner}{/repo}',
-      subscriptions_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/subscriptions',
-      organizations_url: 'https://api.github.com/users/lashapetriashvili-ezetech/orgs',
-      repos_url: 'https://api.github.com/users/lashapetriashvili-ezetech/repos',
-      events_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/events{/privacy}',
-      received_events_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/received_events',
-      type: 'User',
-      site_admin: false,
-    },
-    body: '',
-    state: 'APPROVED',
-    html_url:
-      'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-    pull_request_url:
-      'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-    _links: {
-      html: {
-        href: 'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-      },
-      pull_request: {
-        href: 'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-      },
-    },
-    submitted_at: '2023-02-27T12:58:15Z',
-    commit_id: '09b386f1e69bca76c45b2ed692e89ed6546ba8b6',
-  },
-  {
-    id: 1315528639,
-    node_id: 'PRR_kwDOI96fUM5OaV-_',
-    user: {
-      login: 'user2',
-      id: 125407394,
-      node_id: 'U_kgDOB3mQog',
-      avatar_url: 'https://avatars.githubusercontent.com/u/125407394?v=4',
-      gravatar_id: '',
-      url: 'https://api.github.com/users/lashapetriashvili-ezetech',
-      html_url: 'https://github.com/lashapetriashvili-ezetech',
-      followers_url: 'https://api.github.com/users/lashapetriashvili-ezetech/followers',
-      following_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/following{/other_user}',
-      gists_url: 'https://api.github.com/users/lashapetriashvili-ezetech/gists{/gist_id}',
-      starred_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/starred{/owner}{/repo}',
-      subscriptions_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/subscriptions',
-      organizations_url: 'https://api.github.com/users/lashapetriashvili-ezetech/orgs',
-      repos_url: 'https://api.github.com/users/lashapetriashvili-ezetech/repos',
-      events_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/events{/privacy}',
-      received_events_url:
-        'https://api.github.com/users/lashapetriashvili-ezetech/received_events',
-      type: 'User',
-      site_admin: false,
-    },
-    body: '',
-    state: 'REQUEST_CHANGES',
-    html_url:
-      'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-    pull_request_url:
-      'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-    _links: {
-      html: {
-        href: 'https://github.com/lasha-petriashvili/test-pr-automation/pull/53#pullrequestreview-1315528639',
-      },
-      pull_request: {
-        href: 'https://api.github.com/repos/lasha-petriashvili/test-pr-automation/pulls/53',
-      },
-    },
-    submitted_at: '2023-02-27T12:58:15Z',
-    commit_id: '09b386f1e69bca76c45b2ed692e89ed6546ba8b6',
-  },
-];
+  submitted_at: '2023-03-06T23:16:35Z',
+  commit_id: 'abc',
+};
 
-describe('should test checkReviewersRequiredChanges:', () => {
-  it('should return false if there are two reviewers but one\'s state is a "CHANGES_REQUESTED', () => {
-    const result = checkReviewersRequiredChanges(reviewers);
+function generateReviewsExample(login: string, state: State): Reviews[0] {
+  const reviewsExample = JSON.parse(JSON.stringify(reviewsTemplate));
 
-    expect(result).to.be.equal(false);
-  });
-});
+  const result: Reviews[0] = {
+    ...reviewsExample,
+    state,
+  };
 
-describe('should test getReviewersLastReviews', () => {
-  it('should return empty array', () => {
-    const result = getReviewersLastReviews([]);
+  if (result.user) {
+    result.user.login = login;
+  }
 
-    expect(result).to.deep.equal([]);
+  return result;
+}
+
+describe('should test getReviewersLastReviews: ', () => {
+  it('should return empty array if no reviews', () => {
+    expect(getReviewersLastReviews([])).to.deep.equal([]);
   });
 
-  it('should return array of last reviews', () => {
-    const result = getReviewersLastReviews(reviewers);
+  it('should return "APPROVED" array', () => {
+    const result = getReviewersLastReviews([
+      generateReviewsExample('test', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test', 'APPROVED'),
+    ]);
 
     expect(result).to.deep.equal([
-      { ...result[0], total_review: 1 },
-      { ...result[1], total_review: 2 },
+      {
+        ...generateReviewsExample('test', 'APPROVED'),
+        total_review: 2,
+      },
+    ]);
+  });
+
+  it('should return Reviewers last reviews', () => {
+    const result = getReviewersLastReviews([
+      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+    ]);
+
+    expect(result).to.deep.equal([
+      {
+        ...generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+        total_review: 2,
+      },
+      {
+        ...generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+        total_review: 1,
+      },
     ]);
   });
 });
 
-describe('should test filterReviewersByState', () => {
-  it('should return empty object', () => {
-    const result = filterReviewersByState([]);
-
-    expect(result).to.deep.equal({
+describe('should test filterReviewersByState: ', () => {
+  it('should return empty object if no reviews', () => {
+    expect(filterReviewersByState([])).to.deep.equal({
       requiredChanges: [],
       approve: [],
       commented: [],
     });
   });
 
-  it('should return array of last reviews who required changes and approve PR', () => {
-    const result = filterReviewersByState(reviewers);
+  it('should return reviewers who required changes PR', () => {
+    const getLastReviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+    ]);
+
+    const result = filterReviewersByState(getLastReviews);
 
     expect(result).to.deep.equal({
-      requiredChanges: ['user1'],
-      approve: ['user2'],
+      requiredChanges: ['test1', 'test2'],
+      approve: [],
       commented: [],
     });
+  });
+
+  it('should return reviewers who required changes and approve PR', () => {
+    const getLastReviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+    ]);
+
+    const result = filterReviewersByState(getLastReviews);
+
+    expect(result).to.deep.equal({
+      requiredChanges: ['test2'],
+      approve: ['test1'],
+      commented: [],
+    });
+  });
+
+  it('should return reviewers who required changes, approve and commented PR', () => {
+    const getLastReviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test3', 'COMMENTED'),
+    ]);
+
+    const result = filterReviewersByState(getLastReviews);
+
+    expect(result).to.deep.equal({
+      requiredChanges: ['test2'],
+      approve: ['test1'],
+      commented: ['test3'],
+    });
+  });
+});
+
+describe('should test checkReviewersRequiredChanges: ', () => {
+  it('should return error message if there is no reviews', () => {
+    expect(checkReviewersRequiredChanges({ reviews: [], rules: [] })).to.equal(
+      'Waiting for reviews.',
+    );
+  });
+
+  it('should return error message if reviewer required changes', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test3', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2', 'test3'],
+          required: 1,
+        },
+      ],
+    });
+
+    expect(result).to.equal('test2 required changes.');
+  });
+
+  it('should return error message if reviewers required changes', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test2', 'CHANGES_REQUESTED'),
+      generateReviewsExample('test3', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2', 'test3'],
+          required: 1,
+        },
+      ],
+    });
+
+    expect(result).to.equal('test1, test2 required changes.');
+  });
+
+  it('should return true if list one reviewer approve and no one required changes', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2', 'test3'],
+          required: 1,
+        },
+      ],
+    });
+
+    expect(result).to.equal(true);
+  });
+
+  it('should return true if list two reviewer approve and no one required changes', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'APPROVED'),
+      generateReviewsExample('test2', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2', 'test3'],
+          required: 2,
+        },
+      ],
+    });
+
+    expect(result).to.equal(true);
+  });
+
+  it("should return error message if all required reviewer don't approve yet", () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExample('test1', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2', 'test3'],
+          required: 2,
+        },
+      ],
+    });
+
+    expect(result).to.equal('Waiting 2 reviews from test1, test2, test3 to approve.');
   });
 });
