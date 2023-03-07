@@ -6,7 +6,7 @@ function getReviewers({
   createdBy,
 }: Pick<Rule, 'assign' | 'reviewers'> & {
   createdBy: string;
-}) {
+}): Set<string> {
   const result = new Set<string>();
   reviewers.forEach((reviewer) => {
     if (reviewer === createdBy) {
@@ -28,7 +28,7 @@ function identifyReviewersByDefaultRules({
   createdBy: string;
 }): Rule[] {
   const rulesByFileGroup = byFileGroups;
-  const set = new Set<Rule>();
+  const set: Rule[] = [];
   fileChangesGroups.forEach((fileGroup) => {
     const rules = rulesByFileGroup[fileGroup];
     if (!rules) {
@@ -40,7 +40,7 @@ function identifyReviewersByDefaultRules({
         createdBy,
       });
 
-      set.add({
+      set.push({
         reviewers: [...reviewers],
         required: rule.required,
         assign: rule.assign,
@@ -85,7 +85,7 @@ export function identifyReviewers({
     },
     {},
   );
-  const result = new Set<Rule>();
+  const result: Rule[] = [];
   rules.forEach((rule) => {
     if (rule.ifChanged) {
       const matchFileChanges = rule.ifChanged.some((group) =>
@@ -100,7 +100,7 @@ export function identifyReviewers({
       createdBy,
     });
 
-    result.add({
+    result.push({
       reviewers: [...reviewers],
       required: rule.required,
     });

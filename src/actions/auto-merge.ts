@@ -51,16 +51,18 @@ export async function run(): Promise<void> {
     });
 
     const checks = await github.getCIChecks();
+
     const reviews = await github.getReviews();
 
-    if (
-      !isPrFullyApproved({
-        rules,
-        requiredChecks: config?.options?.requiredChecks,
-        reviews,
-        checks,
-      })
-    ) {
+    const isPrFullyApprovedResponse = isPrFullyApproved({
+      rules,
+      requiredChecks: config?.options?.requiredChecks,
+      reviews,
+      checks,
+    });
+
+    if (isPrFullyApprovedResponse !== true) {
+      info(isPrFullyApprovedResponse || 'PR is not fully approved');
       return;
     }
 

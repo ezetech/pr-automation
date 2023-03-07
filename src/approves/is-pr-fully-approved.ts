@@ -1,7 +1,5 @@
 import { Rule, Reviews, Checks } from '../config/typings';
-import { warning } from '../logger';
-import { checkReviewersRequiredChanges } from './identify-reviews';
-import { areCIChecksPassed } from './identify-ci';
+import { checkReviewersRequiredChanges, areCIChecksPassed } from './';
 
 type Params = {
   rules: Rule[];
@@ -15,19 +13,17 @@ export function isPrFullyApproved({
   requiredChecks,
   checks,
   reviews,
-}: Params): boolean {
-  const checkCIChecks = areCIChecksPassed(checks, requiredChecks);
+}: Params): boolean | string {
+  const checkCIChecks = areCIChecksPassed({ checks, requiredChecks });
 
   if (checkCIChecks !== true) {
-    warning(checkCIChecks);
-    return false;
+    return checkCIChecks;
   }
 
-  const checkReviewers = checkReviewersRequiredChanges(reviews, rules);
+  const checkReviewers = checkReviewersRequiredChanges({ reviews, rules });
 
   if (checkReviewers !== true) {
-    warning(checkReviewers);
-    return false;
+    return checkReviewers;
   }
 
   return true;

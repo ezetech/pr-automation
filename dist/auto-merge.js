@@ -35319,115 +35319,16 @@ function withDebugLog(executeFunction) {
     };
 }
 
-;// CONCATENATED MODULE: ./src/approves/identify-reviews.ts
-function getReviewersLastReviews(listReviews) {
-    const response = {};
-    listReviews
-        .slice()
-        .reverse()
-        .forEach((review) => {
-        var _a;
-        const login = (_a = review === null || review === void 0 ? void 0 : review.user) === null || _a === void 0 ? void 0 : _a.login;
-        if (!login) {
-            return;
-        }
-        if (!response[login]) {
-            response[login] = {
-                user: {
-                    login,
-                },
-                state: review.state,
-                total_review: 0,
-            };
-        }
-        response[login].total_review += 1;
-    });
-    return Object.values(response);
-}
-function filterReviewersByState(reviewersFullData) {
-    const response = {
-        requiredChanges: [],
-        approve: [],
-        commented: [],
-    };
-    reviewersFullData.forEach((reviewer) => {
-        switch (reviewer.state) {
-            case 'APPROVED':
-                response.approve.push(reviewer.user.login);
-                break;
-            case 'CHANGES_REQUESTED':
-                response.requiredChanges.push(reviewer.user.login);
-                break;
-            case 'COMMENTED':
-                response.commented.push(reviewer.user.login);
-                break;
-            default:
-        }
-    });
-    return response;
-}
-function checkRequestedReviewers(requestedReviewers) {
-    const requestedChanges = requestedReviewers.map((reviewer) => reviewer.login);
-    if (requestedChanges.length > 0) {
-        return {
-            status: false,
-            message: `Waiting [${requestedChanges.join(', ')}] to approve.`,
-        };
-    }
-    return { status: true };
-}
-/**
- * @param reviews
- * @param reviewersWithRules
- */
-function checkReviewersRequiredChanges(reviews, rules) {
-    const reviewersByState = filterReviewersByState(getReviewersLastReviews(reviews));
-    if (reviewersByState.requiredChanges.length) {
-        return `${reviewersByState.requiredChanges.join(', ')} required changes.`;
-    }
-    for (const role of rules) {
-        if (role.required) {
-            const requiredReviewers = role.reviewers.filter((reviewer) => {
-                return reviewersByState.approve.includes(reviewer);
-            });
-            if (requiredReviewers.length < role.required) {
-                return `Waiting ${role.required} reviews from ${role.reviewers.join(', ')} to approve.`;
-            }
-        }
-    }
-    return true;
-}
-
-;// CONCATENATED MODULE: ./src/approves/identify-ci.ts
-function areCIChecksPassed(checks, requiredChecks) {
-    if (requiredChecks === undefined) {
-        return true;
-    }
-    for (const name of requiredChecks) {
-        const check = checks.check_runs.find((checkRun) => {
-            return checkRun.name === name;
-        });
-        if (check && (check.status !== 'completed' || check.conclusion !== 'success')) {
-            return `Waiting for "${name}" CI check to pass.`;
-        }
-    }
-    return true;
-}
-
 ;// CONCATENATED MODULE: ./src/approves/is-pr-fully-approved.ts
 
-
-
 function isPrFullyApproved({ rules, requiredChecks, checks, reviews, }) {
-    const checkCIChecks = areCIChecksPassed(checks, requiredChecks);
+    const checkCIChecks = approves_areCIChecksPassed({ checks, requiredChecks });
     if (checkCIChecks !== true) {
-        logger_warning(checkCIChecks);
-        return false;
+        return checkCIChecks;
     }
-    const checkReviewers = checkReviewersRequiredChanges(reviews, rules);
+    const checkReviewers = approves_checkReviewersRequiredChanges({ reviews, rules });
     if (checkReviewers !== true) {
-        logger_warning(checkReviewers);
-        return false;
+        return checkReviewers;
     }
     return true;
 }
@@ -35446,7 +35347,7 @@ function getReviewers({ reviewers, createdBy, }) {
 }
 function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, }) {
     const rulesByFileGroup = byFileGroups;
-    const set = new Set();
+    const set = [];
     fileChangesGroups.forEach((fileGroup) => {
         const rules = rulesByFileGroup[fileGroup];
         if (!rules) {
@@ -35457,7 +35358,7 @@ function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, crea
                 reviewers: rule.reviewers,
                 createdBy,
             });
-            set.add({
+            set.push({
                 reviewers: [...reviewers],
                 required: rule.required,
                 assign: rule.assign,
@@ -35487,7 +35388,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
         result[group] = group;
         return result;
     }, {});
-    const result = new Set();
+    const result = [];
     rules.forEach((rule) => {
         if (rule.ifChanged) {
             const matchFileChanges = rule.ifChanged.some((group) => Boolean(fileChangesGroupsMap[group]));
@@ -35499,7 +35400,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
             reviewers: rule.reviewers,
             createdBy,
         });
-        result.add({
+        result.push({
             reviewers: [...reviewers],
             required: rule.required,
         });
@@ -35507,12 +35408,109 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
     return [...result];
 }
 
+;// CONCATENATED MODULE: ./src/approves/identify-ci.ts
+function areCIChecksPassed({ checks, requiredChecks, }) {
+    if (requiredChecks === undefined) {
+        return true;
+    }
+    for (const name of requiredChecks) {
+        const check = checks.check_runs.find((checkRun) => {
+            return checkRun.name === name;
+        });
+        if (check && (check.status !== 'completed' || check.conclusion !== 'success')) {
+            return `Waiting for "${name}" CI check to pass.`;
+        }
+    }
+    return true;
+}
+
+;// CONCATENATED MODULE: ./src/approves/identify-reviews.ts
+function getReviewersLastReviews(listReviews) {
+    const response = {};
+    listReviews
+        .slice()
+        .reverse()
+        .forEach((review) => {
+        var _a;
+        const login = (_a = review === null || review === void 0 ? void 0 : review.user) === null || _a === void 0 ? void 0 : _a.login;
+        if (!login) {
+            return;
+        }
+        if (!response[login]) {
+            response[login] = Object.assign(Object.assign({}, review), { total_review: 1 });
+        }
+        else {
+            response[login].total_review += 1;
+        }
+    });
+    return Object.values(response).slice().reverse();
+}
+function filterReviewersByState(reviewersFullData) {
+    const response = {
+        requiredChanges: [],
+        approve: [],
+        commented: [],
+    };
+    reviewersFullData.forEach((reviewer) => {
+        if (!reviewer.user) {
+            return;
+        }
+        switch (reviewer.state) {
+            case 'APPROVED':
+                response.approve.push(reviewer.user.login);
+                break;
+            case 'CHANGES_REQUESTED':
+                response.requiredChanges.push(reviewer.user.login);
+                break;
+            case 'COMMENTED':
+                response.commented.push(reviewer.user.login);
+                break;
+            default:
+        }
+    });
+    return response;
+}
+/**
+ * Check if all required reviewers approved the PR
+ *
+ * @param reviews
+ * @param rules
+ *
+ * @returns true if all required reviewers approved the PR, otherwise return a string with the error message
+ */
+function checkReviewersRequiredChanges({ reviews, rules, }) {
+    if (!reviews.length) {
+        return 'Waiting for reviews.';
+    }
+    const reviewersByState = filterReviewersByState(getReviewersLastReviews(reviews));
+    if (reviewersByState.requiredChanges.length) {
+        return `${reviewersByState.requiredChanges.join(', ')} required changes.`;
+    }
+    for (const role of rules) {
+        if (role.required) {
+            const requiredReviewers = role.reviewers.filter((reviewer) => {
+                return reviewersByState.approve.includes(reviewer);
+            });
+            if (requiredReviewers.length < role.required) {
+                return `Waiting ${role.required} reviews from ${role.reviewers.join(', ')} to approve.`;
+            }
+        }
+    }
+    return true;
+}
+
 ;// CONCATENATED MODULE: ./src/approves/index.ts
+
+
 
 
 
 const approves_identifyReviewers = withDebugLog(identifyReviewers);
 const approves_isPrFullyApproved = withDebugLog(isPrFullyApproved);
+const approves_areCIChecksPassed = withDebugLog(areCIChecksPassed);
+const approves_checkReviewersRequiredChanges = withDebugLog(checkReviewersRequiredChanges);
+const approves_getReviewersLastReviews = withDebugLog(getReviewersLastReviews);
+const approves_filterReviewersByState = withDebugLog(filterReviewersByState);
 
 // EXTERNAL MODULE: ./node_modules/minimatch/minimatch.js
 var minimatch = __nccwpck_require__(3973);
@@ -35701,12 +35699,14 @@ function run() {
             });
             const checks = yield getCIChecks();
             const reviews = yield getReviews();
-            if (!approves_isPrFullyApproved({
+            const isPrFullyApprovedResponse = approves_isPrFullyApproved({
                 rules,
                 requiredChecks: (_a = config === null || config === void 0 ? void 0 : config.options) === null || _a === void 0 ? void 0 : _a.requiredChecks,
                 reviews,
                 checks,
-            })) {
+            });
+            if (isPrFullyApprovedResponse !== true) {
+                info(isPrFullyApprovedResponse || 'PR is not fully approved');
                 return;
             }
             if (inputs.comment) {

@@ -1,15 +1,8 @@
-import { PullsGetResponseData } from '@octokit/types';
-import { ReviewerByState, Rule, FunctionResponse, Reviews } from '../config/typings';
-
-type ReviewersLastReviews = {
-  total_review: number;
-  state: string;
-  user: { login: string };
-};
+import { ReviewerByState, Rule, Reviews } from '../config/typings';
 
 export function getReviewersLastReviews(listReviews: Reviews) {
   const response: {
-    [key: string]: ReviewersLastReviews;
+    [key: string]: Reviews[0] & { total_review: number };
   } = {};
 
   listReviews
@@ -24,22 +17,17 @@ export function getReviewersLastReviews(listReviews: Reviews) {
 
       if (!response[login]) {
         response[login] = {
-          user: {
-            login,
-          },
-          state: review.state,
-          total_review: 0,
+          ...review,
+          total_review: 1,
         };
+      } else {
+        response[login].total_review += 1;
       }
-
-      response[login].total_review += 1;
     });
-  return Object.values(response);
+  return Object.values(response).slice().reverse();
 }
 
-export function filterReviewersByState(
-  reviewersFullData: ReviewersLastReviews[],
-): ReviewerByState {
+export function filterReviewersByState(reviewersFullData: Reviews): ReviewerByState {
   const response: ReviewerByState = {
     requiredChanges: [],
     approve: [],
@@ -47,6 +35,10 @@ export function filterReviewersByState(
   };
 
   reviewersFullData.forEach((reviewer) => {
+    if (!reviewer.user) {
+      return;
+    }
+
     switch (reviewer.state) {
       case 'APPROVED':
         response.approve.push(reviewer.user.login);
@@ -65,25 +57,25 @@ export function filterReviewersByState(
   return response;
 }
 
-export function checkRequestedReviewers(
-  requestedReviewers: PullsGetResponseData['requested_reviewers'],
-): FunctionResponse {
-  const requestedChanges = requestedReviewers.map((reviewer) => reviewer.login);
-
-  if (requestedChanges.length > 0) {
-    return {
-      status: false,
-      message: `Waiting [${requestedChanges.join(', ')}] to approve.`,
-    };
-  }
-  return { status: true };
-}
-
 /**
+ * Check if all required reviewers approved the PR
+ *
  * @param reviews
- * @param reviewersWithRules
+ * @param rules
+ *
+ * @returns true if all required reviewers approved the PR, otherwise return a string with the error message
  */
-export function checkReviewersRequiredChanges(reviews: Reviews, rules: Rule[]) {
+export function checkReviewersRequiredChanges({
+  reviews,
+  rules,
+}: {
+  reviews: Reviews;
+  rules: Rule[];
+}): string | boolean {
+  if (!reviews.length) {
+    return 'Waiting for reviews.';
+  }
+
   const reviewersByState: ReviewerByState = filterReviewersByState(
     getReviewersLastReviews(reviews),
   );
