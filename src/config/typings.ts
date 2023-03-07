@@ -46,6 +46,37 @@ export type FunctionResponse = {
 export type Reviews = RestEndpointMethodTypes['pulls']['listReviews']['response']['data'];
 export type Checks = RestEndpointMethodTypes['checks']['listForRef']['response']['data'];
 
+export type JiraStatusCategory = {
+  self: string;
+  id: number;
+  key: string;
+  colorName: string;
+  name: string;
+};
+
+export type JiraStatus = {
+  description: string;
+  iconUrl: string;
+  name: string;
+  id: string;
+  statusCategory: JiraStatusCategory;
+};
+
+export type JiraTransitions = {
+  id: string;
+  name: string;
+  to: JiraStatus;
+};
+
+export type JiraIssue = {
+  id: string;
+  key: string;
+  created: Date;
+  fields: {
+    status: JiraStatus;
+  };
+};
+
 export interface Inputs {
   comment: string;
   repo: string;
@@ -57,6 +88,11 @@ export interface Inputs {
   doNotMergeLabels: string;
   config: string;
   doNotMergeOnBaseBranch: string;
+  jiraToken: string;
+  jiraAccount: string;
+  jiraEndpoint: string;
+  jiraMoveIssueFrom: string;
+  jiraMoveIssueTo: string;
 }
 
 export interface Reviewer {

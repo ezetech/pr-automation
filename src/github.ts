@@ -95,6 +95,11 @@ export function getInputs(): Inputs {
     token: getInput('token', { required: true }),
     config: getInput('config', { required: true }),
     doNotMergeOnBaseBranch: getInput('do-not-merge-on-base-branch'),
+    jiraToken: getInput('jira-token', { required: true }),
+    jiraAccount: getInput('jira-account', { required: true }),
+    jiraEndpoint: getInput('jira-endpoint', { required: true }),
+    jiraMoveIssueFrom: getInput('jira-move-issue-from', { required: true }),
+    jiraMoveIssueTo: getInput('jira-move-issue-to', { required: true }),
   };
 }
 

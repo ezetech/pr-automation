@@ -3,6 +3,7 @@ import * as github from '../github';
 import { info, error, warning } from '../logger';
 import { isPrFullyApproved, identifyReviewers } from '../approves';
 import { identifyFileChangeGroups } from '../reviewer';
+import { changeJiraIssueStatus } from '../jira';
 
 export async function run(): Promise<void> {
   try {
@@ -34,7 +35,7 @@ export async function run(): Promise<void> {
       return;
     }
 
-    const { author } = pr;
+    const { author, branchName } = pr;
 
     const changedFiles = await github.fetchChangedFiles({ pr });
     const fileChangesGroups = identifyFileChangeGroups({
@@ -71,6 +72,14 @@ export async function run(): Promise<void> {
     }
 
     await github.mergePullRequest(pr);
+
+    const jiraResponse = await changeJiraIssueStatus({ branchName, inputs });
+
+    if (jiraResponse.status) {
+      info(jiraResponse.message);
+    } else {
+      warning(jiraResponse.message);
+    }
 
     core.setOutput('merged', true);
   } catch (err) {
