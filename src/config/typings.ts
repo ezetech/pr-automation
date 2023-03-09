@@ -88,6 +88,7 @@ export interface Inputs {
   doNotMergeLabels: string;
   config: string;
   doNotMergeOnBaseBranch: string;
+  shouldChangeJiraIssueStatus: boolean;
   jiraToken: string;
   jiraAccount: string;
   jiraEndpoint: string;

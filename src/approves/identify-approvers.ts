@@ -28,7 +28,7 @@ function identifyReviewersByDefaultRules({
   createdBy: string;
 }): Rule[] {
   const rulesByFileGroup = byFileGroups;
-  const set: Rule[] = [];
+  const ruleList: Rule[] = [];
   fileChangesGroups.forEach((fileGroup) => {
     const rules = rulesByFileGroup[fileGroup];
     if (!rules) {
@@ -40,14 +40,14 @@ function identifyReviewersByDefaultRules({
         createdBy,
       });
 
-      set.push({
+      ruleList.push({
         reviewers: [...reviewers],
         required: rule.required,
         assign: rule.assign,
       });
     });
   });
-  return [...set];
+  return ruleList;
 }
 
 export function identifyReviewers({

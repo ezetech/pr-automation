@@ -73,12 +73,14 @@ export async function run(): Promise<void> {
 
     await github.mergePullRequest(pr);
 
-    const jiraResponse = await changeJiraIssueStatus({ branchName, inputs });
+    if (inputs.shouldChangeJiraIssueStatus) {
+      const jiraResponse = await changeJiraIssueStatus({ branchName, inputs });
 
-    if (jiraResponse.status) {
-      info(jiraResponse.message);
-    } else {
-      warning(jiraResponse.message);
+      if (jiraResponse.status) {
+        info(jiraResponse.message);
+      } else {
+        warning(jiraResponse.message);
+      }
     }
 
     core.setOutput('merged', true);

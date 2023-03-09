@@ -2547,6 +2547,10 @@ function checkBypass(reqUrl) {
     if (!reqUrl.hostname) {
         return false;
     }
+    const reqHost = reqUrl.hostname;
+    if (isLoopbackAddress(reqHost)) {
+        return true;
+    }
     const noProxy = process.env['no_proxy'] || process.env['NO_PROXY'] || '';
     if (!noProxy) {
         return false;
@@ -2572,13 +2576,24 @@ function checkBypass(reqUrl) {
         .split(',')
         .map(x => x.trim().toUpperCase())
         .filter(x => x)) {
-        if (upperReqHosts.some(x => x === upperNoProxyItem)) {
+        if (upperNoProxyItem === '*' ||
+            upperReqHosts.some(x => x === upperNoProxyItem ||
+                x.endsWith(`.${upperNoProxyItem}`) ||
+                (upperNoProxyItem.startsWith('.') &&
+                    x.endsWith(`${upperNoProxyItem}`)))) {
             return true;
         }
     }
     return false;
 }
 exports.checkBypass = checkBypass;
+function isLoopbackAddress(host) {
+    const hostLower = host.toLowerCase();
+    return (hostLower === 'localhost' ||
+        hostLower.startsWith('127.') ||
+        hostLower.startsWith('[::1]') ||
+        hostLower.startsWith('[0:0:0:0:0:0:0:1]'));
+}
 //# sourceMappingURL=proxy.js.map
 
 /***/ }),
@@ -39743,7 +39758,7 @@ return new B(c,{type:"multipart/form-data; boundary="+b})}
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.7.0","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.0.0","@hapi/topo":"^5.0.0","@sideway/address":"^4.1.3","@sideway/formula":"^3.0.0","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.0.1","@types/node":"^14.18.24","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
+module.exports = JSON.parse('{"name":"joi","description":"Object schema validation","version":"17.8.3","repository":"git://github.com/hapijs/joi","main":"lib/index.js","types":"lib/index.d.ts","browser":"dist/joi-browser.min.js","files":["lib/**/*","dist/*"],"keywords":["schema","validation"],"dependencies":{"@hapi/hoek":"^9.0.0","@hapi/topo":"^5.0.0","@sideway/address":"^4.1.3","@sideway/formula":"^3.0.1","@sideway/pinpoint":"^2.0.0"},"devDependencies":{"@hapi/bourne":"2.x.x","@hapi/code":"8.x.x","@hapi/joi-legacy-test":"npm:@hapi/joi@15.x.x","@hapi/lab":"^25.0.1","@types/node":"^14.18.24","typescript":"4.3.x"},"scripts":{"prepublishOnly":"cd browser && npm install && npm run build","test":"lab -t 100 -a @hapi/code -L -Y","test-cov-html":"lab -r html -o coverage.html -a @hapi/code"},"license":"BSD-3-Clause"}');
 
 /***/ }),
 
@@ -40037,11 +40052,14 @@ function getInputs() {
         token: (0,core.getInput)('token', { required: true }),
         config: (0,core.getInput)('config', { required: true }),
         doNotMergeOnBaseBranch: (0,core.getInput)('do-not-merge-on-base-branch'),
-        jiraToken: (0,core.getInput)('jira-token', { required: true }),
-        jiraAccount: (0,core.getInput)('jira-account', { required: true }),
-        jiraEndpoint: (0,core.getInput)('jira-endpoint', { required: true }),
-        jiraMoveIssueFrom: (0,core.getInput)('jira-move-issue-from', { required: true }),
-        jiraMoveIssueTo: (0,core.getInput)('jira-move-issue-to', { required: true }),
+        shouldChangeJiraIssueStatus: (0,core.getInput)('should-change-jira-issue-status', {
+            required: false,
+        }) === 'true',
+        jiraToken: (0,core.getInput)('jira-token', { required: false }),
+        jiraAccount: (0,core.getInput)('jira-account', { required: false }),
+        jiraEndpoint: (0,core.getInput)('jira-endpoint', { required: false }),
+        jiraMoveIssueFrom: (0,core.getInput)('jira-move-issue-from', { required: false }),
+        jiraMoveIssueTo: (0,core.getInput)('jira-move-issue-to', { required: false }),
     };
 }
 function fetchConfig() {
@@ -40258,7 +40276,7 @@ function getReviewers({ reviewers, createdBy, }) {
 }
 function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, }) {
     const rulesByFileGroup = byFileGroups;
-    const set = [];
+    const ruleList = [];
     fileChangesGroups.forEach((fileGroup) => {
         const rules = rulesByFileGroup[fileGroup];
         if (!rules) {
@@ -40269,14 +40287,14 @@ function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, crea
                 reviewers: rule.reviewers,
                 createdBy,
             });
-            set.push({
+            ruleList.push({
                 reviewers: [...reviewers],
                 required: rule.required,
                 assign: rule.assign,
             });
         });
     });
-    return [...set];
+    return ruleList;
 }
 function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, }) {
     const rules = rulesByCreator[createdBy];
@@ -42903,12 +42921,14 @@ function run() {
                 yield createComment(inputs.comment);
             }
             yield mergePullRequest(pr);
-            const jiraResponse = yield jira_changeJiraIssueStatus({ branchName, inputs });
-            if (jiraResponse.status) {
-                info(jiraResponse.message);
-            }
-            else {
-                logger_warning(jiraResponse.message);
+            if (inputs.shouldChangeJiraIssueStatus) {
+                const jiraResponse = yield jira_changeJiraIssueStatus({ branchName, inputs });
+                if (jiraResponse.status) {
+                    info(jiraResponse.message);
+                }
+                else {
+                    logger_warning(jiraResponse.message);
+                }
             }
             core.setOutput('merged', true);
         }

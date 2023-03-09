@@ -39,22 +39,26 @@ inputs:
     required: false
     description: ''
     default: ''
+  should-change-jira-issue-status:
+    required: false
+    description: ''
+    default: 'false'
   jira-token:
-    required: true
+    required: false
     description: 'Jira Token'
   jira-account:
-    required: true
+    required: false
     description: 'Jira Account'
   jira-endpoint:
-    required: true
+    required: false
     description: 'Jira EndPoint'
   jira-move-issue-from:
-    required: true
+    required: false
     description: 'Move Issue From'
   jira-move-issue-to:
-    required: true
+    required: false
     description: 'Move Issue To'
 
 runs:
   using: 'node16'
-  main: 'dist/auto-merge.js'
+  main: '../dist/auto-merge.js'
