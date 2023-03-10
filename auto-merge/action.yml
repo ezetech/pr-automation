@@ -1,0 +1,64 @@
+name: 'PR automatically merger'
+description: 'desc'
+branding:
+  icon: 'book-open'
+  color: 'green'
+inputs:
+  token:
+    required: true
+    description: 'GitHub Token'
+  config:
+    required: true
+    description: 'Config Files'
+    default: ''
+  comment:
+    required: false
+    description: 'Comment before merge'
+    default: ''
+  repository:
+    required: false
+    description: 'The GitHub repository containing the issue or pr.'
+    default: ${{ github.repository }}
+  pullRequestNumber:
+    required: false
+    description: 'Number of the pull request'
+    default: ${{ github.event.pull_request.number }}
+  do-not-merge-labels:
+    required: false
+    description: >
+      When any of the labels in this comma-separated list is applied to a pull request, it will not be merged automatically.
+  sha:
+    required: false
+    description: 'SHA of the pull request commit'
+    default: ${{ github.event.pull_request.head.sha }}
+  strategy:
+    required: false
+    description: 'Merge strategy'
+    default: 'merge'
+  do-not-merge-on-base-branch:
+    required: false
+    description: ''
+    default: ''
+  should-change-jira-issue-status:
+    required: false
+    description: ''
+    default: 'false'
+  jira-token:
+    required: false
+    description: 'Jira Token'
+  jira-account:
+    required: false
+    description: 'Jira Account'
+  jira-endpoint:
+    required: false
+    description: 'Jira EndPoint'
+  jira-move-issue-from:
+    required: false
+    description: 'Move Issue From'
+  jira-move-issue-to:
+    required: false
+    description: 'Move Issue To'
+
+runs:
+  using: 'node16'
+  main: '../dist/auto-merge.js'

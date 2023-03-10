@@ -1,18 +1,30 @@
-/*
-Function that returns true if PR is fully approved.
-PR is considered NOT fully approved when:
-  - some changes requested at current state
-  - some changes requested that was not approved lately
-  - required PR checks are failed.
+import { Rule, Reviews, Checks } from '../config/typings';
+import { checkReviewersRequiredChanges, areCIChecksPassed } from './';
 
-If PR is NOT fully approved,
-  return a reason why:
-    - groups that still waiting for an approval (how many left)
-    - users that have requested changes (now or before and it was not approved lately)
-    - failed CI checks
+type Params = {
+  rules: Rule[];
+  requiredChecks: string[] | undefined;
+  checks: Checks;
+  reviews: Reviews;
+};
 
-Arguments are:
-  - currentState (result of identifyCurrentState function)
-  - approver groups (result of identifyApprovers function)
-  - CI checks statuses @TODO
-*/
+export function isPrFullyApproved({
+  rules,
+  requiredChecks,
+  checks,
+  reviews,
+}: Params): boolean | string {
+  const checkCIChecks = areCIChecksPassed({ checks, requiredChecks });
+
+  if (checkCIChecks !== true) {
+    return checkCIChecks;
+  }
+
+  const checkReviewers = checkReviewersRequiredChanges({ reviews, rules });
+
+  if (checkReviewers !== true) {
+    return checkReviewers;
+  }
+
+  return true;
+}
