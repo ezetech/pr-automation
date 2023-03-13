@@ -175,7 +175,7 @@ rulesByCreator:
       required: 1
 ```
 - `reviewers` — list of who will be asked for review
-- `required` — amount of rChange Jira Issue Statusequired approves for that list
+- `required` — amount of required approves for that list
 - `assign` — you can assign not whole list, but only, for example, 2 out of 3. These 2 will be randomly picked.
 - `ifChanged` — apply the rule (assign reviewers) only if changed specific group(s) of file.
 
