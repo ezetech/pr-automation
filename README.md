@@ -242,7 +242,7 @@ on:
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize, edited, labeled, unlabeled]
   pull_request_review:
-    types: [submitted, qedited, dismissed]
+    types: [submitted, edited, dismissed]
 
 jobs:
   auto-merge-request:
@@ -330,7 +330,7 @@ on:
   pull_request:
     types: [opened, ready_for_review, reopened, synchronize, edited, labeled, unlabeled]
   pull_request_review:
-    types: [submitted, qedited, dismissed]
+    types: [submitted, edited, dismissed]
 
 jobs:
   auto-merge-request:
