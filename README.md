@@ -5,6 +5,7 @@ This is github action that auto assigns reviewers for PR, auto merges it based o
 * [Auto Assign](#assign)
 * [Auto Merge](#merge)
 * [Change Jira Issue Status](#jira)
+* [Check Reviewers in Sage HR](#sage)
 
 <a name='assign'></a>
 # Auto assign
@@ -353,6 +354,61 @@ jobs:
           jira-move-issue-to: Ready For QA
 ```
 
+<a name='sage'></a>
+# Check Reviewers in Sage HR 
+
+This Github Action will check employees who don't work that day and don't assign as a reviewer in Sage HR In the configuration file
+
+## Inputs
+
+| Name                               | Required | Description                                                                                                         |
+| ---------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------|
+| `check-reviewer-on-sage`           | yes      | Default it's `false`                                                                                                |
+| `sage-url`                         | yes      | Sage HR URL                                                                                                         |
+| `sage-token`                       | yes      | Sage HR token                                                                                                       |
+
+### Example of workflow file
+
+```yamlex
+name: Auto Request Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, synchronize]
+
+jobs:
+  auto-request-review:
+    name: Auto Request Review
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use PR auto merge action
+        uses: ezetech/pr-automation/auto-assign@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          config: '.github/pr-automation-rules.yml'
+          check-reviewer-on-sage: true
+          sage-url: https://test.sage.hr
+          sage-token: ${{ secrets.SAGE_TOKEN }}
+```
+### Configuration File
+
+In the configuration file you should add the `sageUsers` parameter with GitHub logins and Sage HR emails.
+
+```yamlex
+options:
+  requiredChecks:
+    - Auto Request Reviews
+  ignoredLabels:
+    - Feature Branch
+
+sageUsers:
+  user1: # GitHub Login
+    - email: user1@gmail.com # Sage HR Email
+  user2: # GitHub Login 
+    - email: user2@gmail.com # Sage HR Email
+  user3: # GitHub Login 
+    - email: user3@gmail.com # sage HR Email
+```
 
 ## Local development
 
