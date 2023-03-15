@@ -35,6 +35,16 @@ const schema = Joi.object<Config>()
     fileChangesGroups: Joi.object()
       .pattern(Joi.string(), Joi.array().items(Joi.string()))
       .required(),
+    sageUsers: Joi.object()
+      .pattern(
+        Joi.string(),
+        Joi.array().items(
+          Joi.object({
+            email: Joi.string().required(),
+          }),
+        ),
+      )
+      .required(),
   })
   .required()
   .options({ stripUnknown: true });

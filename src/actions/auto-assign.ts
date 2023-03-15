@@ -1,3 +1,4 @@
+import { getInput } from '@actions/core';
 import { info, error, warning, debug } from '../logger';
 import * as github from '../github';
 import {
@@ -6,9 +7,18 @@ import {
   shouldRequestReview,
 } from '../reviewer';
 
+import { filterReviewersWhoDontWorkToday } from '../sage';
+
 export async function run(): Promise<void> {
   try {
     info('Starting pr auto assign.');
+
+    const inputs = {
+      checkReviewerOnSage:
+        getInput('check-reviewer-on-sage', { required: false }) === 'true',
+      sageUrl: getInput('sage-url', { required: false }),
+      sageToken: getInput('sage-token', { required: false }),
+    };
 
     let config;
 
@@ -52,7 +62,7 @@ export async function run(): Promise<void> {
     info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
 
     debug('Identifying reviewers based on the changed files and PR creator');
-    const reviewers = identifyReviewers({
+    let reviewers = identifyReviewers({
       createdBy: author,
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
@@ -60,6 +70,23 @@ export async function run(): Promise<void> {
       requestedReviewerLogins: pr.requestedReviewerLogins,
     });
     info(`Identified reviewers: ${reviewers.join(', ')}`);
+
+    if (inputs.checkReviewerOnSage) {
+      try {
+        const sageUsers = config.sageUsers || {};
+
+        reviewers = await filterReviewersWhoDontWorkToday({
+          sageBaseUrl: inputs.sageUrl,
+          sageToken: inputs.sageToken,
+          reviewers,
+          sageUsers,
+        });
+
+        info(`Remove reviewers who don't work today: ${reviewers.join(', ')}`);
+      } catch (err) {
+        warning('Sage Error: ' + JSON.stringify(err, null, 2));
+      }
+    }
 
     const reviewersToAssign = reviewers.filter((reviewer) => reviewer !== author);
     if (reviewersToAssign.length === 0) {

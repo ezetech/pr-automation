@@ -22,6 +22,7 @@ export type Config = {
   rulesByCreator: Record<string, Rule[]>;
   options?: Options;
   postReviewOptions?: {};
+  sageUsers: {};
 };
 
 export type ReviewerByState = {
@@ -76,6 +77,33 @@ export type JiraIssue = {
     status: JiraStatus;
   };
 };
+
+export type SageResponse<T> = {
+  data: T[];
+  meta: {
+    current_page: number;
+    next_page: number | null;
+    per_page: number;
+    total_pages: number;
+    total_count: number;
+  };
+};
+
+export type SageEmployee = SageResponse<{
+  id: number;
+  first_name: string;
+  last_email: string;
+  email: string;
+}>;
+
+export type SageLeaveManagement = SageResponse<{
+  id: string;
+  status: string;
+  status_code: 'approved' | 'canceled';
+  start_date: string;
+  end_date: string;
+  employee_id: number;
+}>;
 
 export interface Inputs {
   comment: string;
