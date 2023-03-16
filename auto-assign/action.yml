@@ -8,6 +8,17 @@ inputs:
     required: true
   config:
     required: true
+  check-reviewer-on-sage:
+    required: false
+    description: ''
+    default: 'false'
+  sage-url:
+    required: false
+    description: ''
+  sage-token:
+    required: false
+    description: ''
+
 runs:
   using: 'node16'
   main: '../dist/auto-assign.js'

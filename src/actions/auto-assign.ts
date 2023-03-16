@@ -1,3 +1,4 @@
+import { getInput } from '@actions/core';
 import { info, error, warning, debug } from '../logger';
 import * as github from '../github';
 import {
@@ -6,9 +7,18 @@ import {
   shouldRequestReview,
 } from '../reviewer';
 
+import { getEmployeesWhoAreOutToday } from '../sage';
+
 export async function run(): Promise<void> {
   try {
     info('Starting pr auto assign.');
+
+    const inputs = {
+      checkReviewerOnSage:
+        getInput('check-reviewer-on-sage', { required: false }) === 'true',
+      sageUrl: getInput('sage-url', { required: false }),
+      sageToken: getInput('sage-token', { required: false }),
+    };
 
     let config;
 
@@ -61,7 +71,42 @@ export async function run(): Promise<void> {
     });
     info(`Identified reviewers: ${reviewers.join(', ')}`);
 
-    const reviewersToAssign = reviewers.filter((reviewer) => reviewer !== author);
+    const sageUsers: {
+      [key: string]: {
+        email: string;
+      }[];
+    } = config.sageUsers || {};
+    let employeesWhoAreOutToday: string[] = [];
+
+    if (inputs.checkReviewerOnSage) {
+      try {
+        employeesWhoAreOutToday = await getEmployeesWhoAreOutToday({
+          sageBaseUrl: inputs.sageUrl,
+          sageToken: inputs.sageToken,
+        });
+
+        info(
+          `Employees reviewers who don't work today: ${employeesWhoAreOutToday.join(
+            ', ',
+          )}`,
+        );
+      } catch (err) {
+        warning('Sage Error: ' + JSON.stringify(err, null, 2));
+      }
+    }
+
+    const reviewersToAssign = reviewers.filter((reviewer) => {
+      if (reviewer === author) {
+        return false;
+      }
+
+      if (sageUsers[reviewer]) {
+        return !employeesWhoAreOutToday.includes(sageUsers[reviewer][0].email);
+      }
+
+      return true;
+    });
+
     if (reviewersToAssign.length === 0) {
       info(`No reviewers were matched for author ${author}. Terminating the process`);
       return;

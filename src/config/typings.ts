@@ -22,6 +22,7 @@ export type Config = {
   rulesByCreator: Record<string, Rule[]>;
   options?: Options;
   postReviewOptions?: {};
+  sageUsers: {};
 };
 
 export type ReviewerByState = {
@@ -76,6 +77,20 @@ export type JiraIssue = {
     status: JiraStatus;
   };
 };
+
+export type SageResponse<T> = {
+  data: T[];
+};
+
+export type SageOutOfOfficeToday = SageResponse<{
+  policy_id: number;
+  employee_id: number;
+  employee: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}>;
 
 export interface Inputs {
   comment: string;
