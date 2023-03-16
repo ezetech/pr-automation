@@ -1,7 +1,5 @@
 import { withDebugLog } from '../utils';
 
-import {
-  filterReviewersWhoDontWorkToday as filterReviewersWhoDontWorkTodayFunc,
-} from './sage';
+import { getEmployeesWhoAreOutToday as getEmployeesWhoAreOutTodayFunc } from './sage';
 
-export const filterReviewersWhoDontWorkToday = withDebugLog(filterReviewersWhoDontWorkTodayFunc);
+export const getEmployeesWhoAreOutToday = withDebugLog(getEmployeesWhoAreOutTodayFunc);

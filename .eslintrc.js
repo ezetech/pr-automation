@@ -14,6 +14,7 @@ const localSkipWords = [
   'Tobias',
   'Chet',
   'graphql',
+  'Jira',
 ];
 
 // we merge skip words from shared config with local skip words

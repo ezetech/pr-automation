@@ -7,7 +7,7 @@ import {
   shouldRequestReview,
 } from '../reviewer';
 
-import { filterReviewersWhoDontWorkToday } from '../sage';
+import { getEmployeesWhoAreOutToday } from '../sage';
 
 export async function run(): Promise<void> {
   try {
@@ -62,7 +62,7 @@ export async function run(): Promise<void> {
     info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
 
     debug('Identifying reviewers based on the changed files and PR creator');
-    let reviewers = identifyReviewers({
+    const reviewers = identifyReviewers({
       createdBy: author,
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
@@ -71,24 +71,42 @@ export async function run(): Promise<void> {
     });
     info(`Identified reviewers: ${reviewers.join(', ')}`);
 
+    const sageUsers: {
+      [key: string]: {
+        email: string;
+      }[];
+    } = config.sageUsers || {};
+    let employeesWhoAreOutToday: string[] = [];
+
     if (inputs.checkReviewerOnSage) {
       try {
-        const sageUsers = config.sageUsers || {};
-
-        reviewers = await filterReviewersWhoDontWorkToday({
+        employeesWhoAreOutToday = await getEmployeesWhoAreOutToday({
           sageBaseUrl: inputs.sageUrl,
           sageToken: inputs.sageToken,
-          reviewers,
-          sageUsers,
         });
 
-        info(`Remove reviewers who don't work today: ${reviewers.join(', ')}`);
+        info(
+          `Employees reviewers who don't work today: ${employeesWhoAreOutToday.join(
+            ', ',
+          )}`,
+        );
       } catch (err) {
         warning('Sage Error: ' + JSON.stringify(err, null, 2));
       }
     }
 
-    const reviewersToAssign = reviewers.filter((reviewer) => reviewer !== author);
+    const reviewersToAssign = reviewers.filter((reviewer) => {
+      if (reviewer === author) {
+        return false;
+      }
+
+      if (sageUsers[reviewer]) {
+        return !employeesWhoAreOutToday.includes(sageUsers[reviewer][0].email);
+      }
+
+      return true;
+    });
+
     if (reviewersToAssign.length === 0) {
       info(`No reviewers were matched for author ${author}. Terminating the process`);
       return;
