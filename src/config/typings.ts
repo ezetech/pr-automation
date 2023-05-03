@@ -14,6 +14,9 @@ export type DefaultRules = {
 type Options = {
   ignoredLabels: string[];
   requiredChecks?: string[];
+  withMessage?: {
+    messageId?: string;
+  };
 };
 
 export type Config = {
