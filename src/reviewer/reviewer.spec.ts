@@ -166,7 +166,7 @@ describe('Should test identifyReviewers: ', () => {
     }
     done();
   });
-  it('Should assign same reviewers for Bob 1000 times by using default rules. Because 3 approvers were already requested before', (done) => {
+  it('Should assign same reviewers for Bob 1000 times by using default rules. Because 3 approvers were already requested before (1)', (done) => {
     const times = 1000;
     for (let i = 0; i < times; i++) {
       const result = identifyReviewers({
@@ -199,6 +199,41 @@ describe('Should test identifyReviewers: ', () => {
       expect(result).to.include('Quade', 'Quade is required');
       expect(result).to.include('Vinny', 'Vinny is required');
       expect(result.length).to.be.equal(3);
+    }
+    done();
+  });
+
+  it('Should assign same reviewers for Bob 1000 times by using default rules. Because 3 approvers were already requested before (2)', (done) => {
+    const times = 1000;
+    for (let i = 0; i < times; i++) {
+      const result = identifyReviewers({
+        requestedReviewerLogins: ['Colin'],
+        createdBy: 'Bob',
+        defaultRules: {
+          byFileGroups: {
+            'file-group-1': [
+              {
+                reviewers: [
+                  'Calvin',
+                  'Quade',
+                  'Bob',
+                  'Colin',
+                  'Chet',
+                  'Vinny',
+                  'Hank',
+                  'Tobias',
+                ],
+                required: 1,
+                assign: 1,
+              },
+            ],
+          },
+        },
+        rulesByCreator: {},
+        fileChangesGroups: ['file-group-1'],
+      });
+      expect(result).to.include('Colin', 'Colin is required');
+      expect(result.length).to.be.equal(1);
     }
     done();
   });

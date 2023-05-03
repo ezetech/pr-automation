@@ -6,6 +6,7 @@ import { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods/d
 import { validateConfig } from './config';
 import { Config, Inputs, Strategy, Reviews, Checks } from './config/typings';
 import { debug, error, warning } from './logger';
+import { Endpoints } from '@octokit/types';
 
 function getMyOctokit() {
   const myToken = getInput('token');
@@ -174,6 +175,55 @@ export async function assignReviewers(
     reviewers: reviewers,
   });
   return;
+}
+
+export type CreateIssueCommentResponseData =
+  Endpoints['POST /repos/:owner/:repo/issues/:issue_number/comments']['response']['data'];
+
+export async function updateComment(
+  existingCommentId: number,
+  body: string,
+): Promise<CreateIssueCommentResponseData> {
+  const octokit = getMyOctokit();
+  const updatedComment = await octokit.rest.issues.updateComment({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    comment_id: existingCommentId,
+    body,
+  });
+
+  return updatedComment.data;
+}
+
+export async function getExistingCommentId(
+  issueNumber: number,
+  messageId: string,
+): Promise<number | undefined> {
+  const octokit = getMyOctokit();
+  const parameters = {
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    issue_number: issueNumber,
+    per_page: 100,
+  };
+
+  let found;
+
+  for await (const comments of octokit.paginate.iterator(
+    octokit.rest.issues.listComments,
+    parameters,
+  )) {
+    // @ts-ignore
+    found = comments.data.find(({ body }) => {
+      return (body?.search(messageId) ?? -1) > -1;
+    });
+
+    if (found) {
+      break;
+    }
+  }
+
+  return found?.id;
 }
 
 export async function getLatestCommitDate(pr: PullRequest): Promise<{

@@ -2,6 +2,7 @@ import { getInput } from '@actions/core';
 import { info, error, warning, debug } from '../logger';
 import * as github from '../github';
 import {
+  getMessage,
   identifyFileChangeGroups,
   identifyReviewers,
   shouldRequestReview,
@@ -61,7 +62,12 @@ export async function run(): Promise<void> {
     });
     info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
 
-    debug('Identifying reviewers based on the changed files and PR creator');
+    info(
+      `Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(
+        pr.requestedReviewerLogins,
+      )}`,
+    );
+
     const reviewers = identifyReviewers({
       createdBy: author,
       fileChangesGroups,
@@ -69,7 +75,7 @@ export async function run(): Promise<void> {
       defaultRules: config.defaultRules,
       requestedReviewerLogins: pr.requestedReviewerLogins,
     });
-    info(`Identified reviewers: ${reviewers.join(', ')}`);
+    info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
 
     const sageUsers: {
       [key: string]: {
@@ -114,6 +120,29 @@ export async function run(): Promise<void> {
     await github.assignReviewers(pr, reviewersToAssign);
 
     info(`Requesting review to ${reviewersToAssign.join(', ')}`);
+
+    const messageId = config.options?.withMessage?.messageId;
+    debug(`messageId: ${messageId}`);
+    if (messageId) {
+      const existingCommentId = await github.getExistingCommentId(pr.number, messageId);
+      info(`existingCommentId: ${existingCommentId}`);
+      const message = getMessage({
+        createdBy: author,
+        fileChangesGroups,
+        rulesByCreator: config.rulesByCreator,
+        defaultRules: config.defaultRules,
+        reviewersToAssign,
+      });
+      const body = `${messageId}\n\n${message}`;
+      if (existingCommentId) {
+        debug('Updating comment');
+        await github.updateComment(existingCommentId, body);
+      } else {
+        debug('Creating comment');
+        await github.createComment(body);
+      }
+      info(`Commenting on PR, body: "${body}"`);
+    }
 
     info('Done');
   } catch (err) {
