@@ -35175,7 +35175,7 @@ function getInputs() {
         comment: (0,core.getInput)('comment'),
         owner,
         repo,
-        pullRequestNumber: Number((0,core.getInput)('pullRequestNumber', { required: true })),
+        pullRequestNumber: Number((0,core.getInput)('pullRequestNumber', { required: false })),
         sha: (0,core.getInput)('sha', { required: true }),
         strategy: (0,core.getInput)('strategy', { required: true }),
         doNotMergeLabels: (0,core.getInput)('do-not-merge-labels'),

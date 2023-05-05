@@ -98,7 +98,7 @@ export function getInputs(): Inputs {
     comment: getInput('comment'),
     owner,
     repo,
-    pullRequestNumber: Number(getInput('pullRequestNumber', { required: true })),
+    pullRequestNumber: Number(getInput('pullRequestNumber', { required: false })),
     sha: getInput('sha', { required: true }),
     strategy: getInput('strategy', { required: true }) as Strategy,
     doNotMergeLabels: getInput('do-not-merge-labels'),
