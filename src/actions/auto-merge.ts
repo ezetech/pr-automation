@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '../github';
-import { info, error, warning } from '../logger';
+import { info, error, warning, debug } from '../logger';
 import { isPrFullyApproved, identifyReviewers } from '../approves';
 import { identifyFileChangeGroups } from '../reviewer';
 import { changeJiraIssueStatus } from '../jira';
@@ -13,6 +13,7 @@ export async function run(): Promise<void> {
 
     let config;
 
+    debug('fetching config');
     try {
       config = await github.fetchConfig();
     } catch (err) {
@@ -37,7 +38,12 @@ export async function run(): Promise<void> {
 
     const { author, branchName } = pr;
 
+    debug('Fetching changed files in the pull request');
     const changedFiles = await github.fetchChangedFiles({ pr });
+
+    debug('Fetching pull request reviewers');
+    const requestedReviewerLogins = await github.fetchPullRequestReviewers({ pr });
+
     const fileChangesGroups = identifyFileChangeGroups({
       fileChangesGroups: config.fileChangesGroups,
       changedFiles,
@@ -48,7 +54,7 @@ export async function run(): Promise<void> {
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins: pr.requestedReviewerLogins,
+      requestedReviewerLogins: requestedReviewerLogins,
     });
 
     const checks = await github.getCIChecks();

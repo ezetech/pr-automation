@@ -48,12 +48,6 @@ class PullRequest {
   get baseBranchName(): string {
     return this._pr.base.ref;
   }
-
-  get requestedReviewerLogins(): string[] {
-    return (this._pr.requested_reviewers as { login: string }[]).map(
-      (label) => label.login,
-    );
-  }
 }
 
 export function getPullRequest(): PullRequest {
@@ -64,6 +58,21 @@ export function getPullRequest(): PullRequest {
   }
   debug(`PR event payload: ${JSON.stringify(pr)}`);
   return new PullRequest(pr);
+}
+
+export async function fetchPullRequestReviewers({
+  pr,
+}: {
+  pr: PullRequest;
+}): Promise<string[]> {
+  const octokit = getMyOctokit();
+  const response = await octokit.rest.pulls.listRequestedReviewers({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pull_number: pr.number,
+  });
+  debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+  return response.users.map((item: { login: string }) => item.login);
 }
 
 export function validatePullRequest(pr: PullRequest): string | null {

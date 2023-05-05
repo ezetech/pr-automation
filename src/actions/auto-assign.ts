@@ -9,6 +9,7 @@ import {
 } from '../reviewer';
 
 import { getEmployeesWhoAreOutToday } from '../sage';
+import { fetchPullRequestReviewers } from '../github';
 
 export async function run(): Promise<void> {
   try {
@@ -23,6 +24,7 @@ export async function run(): Promise<void> {
 
     let config;
 
+    debug('fetching config');
     try {
       config = await github.fetchConfig();
     } catch (err) {
@@ -56,6 +58,8 @@ export async function run(): Promise<void> {
 
     debug('Fetching changed files in the pull request');
     const changedFiles = await github.fetchChangedFiles({ pr });
+    debug('Fetching pull request reviewers');
+    const requestedReviewerLogins = await github.fetchPullRequestReviewers({ pr });
     const fileChangesGroups = identifyFileChangeGroups({
       fileChangesGroups: config.fileChangesGroups,
       changedFiles,
@@ -64,7 +68,7 @@ export async function run(): Promise<void> {
 
     info(
       `Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(
-        pr.requestedReviewerLogins,
+        requestedReviewerLogins,
       )}`,
     );
 
@@ -73,7 +77,7 @@ export async function run(): Promise<void> {
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins: pr.requestedReviewerLogins,
+      requestedReviewerLogins: requestedReviewerLogins,
     });
     info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
 
