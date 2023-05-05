@@ -35135,9 +35135,6 @@ class PullRequest {
     get baseBranchName() {
         return this._pr.base.ref;
     }
-    get requestedReviewerLogins() {
-        return this._pr.requested_reviewers.map((label) => label.login);
-    }
 }
 function getPullRequest() {
     const pr = github.context.payload.pull_request;
@@ -35147,6 +35144,18 @@ function getPullRequest() {
     }
     debug(`PR event payload: ${JSON.stringify(pr)}`);
     return new PullRequest(pr);
+}
+function fetchPullRequestReviewers({ pr, }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getMyOctokit();
+        const response = yield octokit.rest.pulls.listRequestedReviewers({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            pull_number: pr.number,
+        });
+        debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+        return response.users.map((item) => item.login);
+    });
 }
 function validatePullRequest(pr) {
     if (pr.isDraft) {
@@ -35977,6 +35986,7 @@ function run() {
             info('Staring PR auto merging.');
             const inputs = getInputs();
             let config;
+            debug('fetching config');
             try {
                 config = yield fetchConfig();
             }
@@ -35995,7 +36005,10 @@ function run() {
                 return;
             }
             const { author, branchName } = pr;
+            debug('Fetching changed files in the pull request');
             const changedFiles = yield fetchChangedFiles({ pr });
+            debug('Fetching pull request reviewers');
+            const requestedReviewerLogins = yield fetchPullRequestReviewers({ pr });
             const fileChangesGroups = reviewer_identifyFileChangeGroups({
                 fileChangesGroups: config.fileChangesGroups,
                 changedFiles,
@@ -36005,7 +36018,7 @@ function run() {
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins: pr.requestedReviewerLogins,
+                requestedReviewerLogins: requestedReviewerLogins,
             });
             const checks = yield getCIChecks();
             const reviews = yield getReviews();

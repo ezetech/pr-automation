@@ -35135,9 +35135,6 @@ class PullRequest {
     get baseBranchName() {
         return this._pr.base.ref;
     }
-    get requestedReviewerLogins() {
-        return this._pr.requested_reviewers.map((label) => label.login);
-    }
 }
 function getPullRequest() {
     const pr = github.context.payload.pull_request;
@@ -35147,6 +35144,18 @@ function getPullRequest() {
     }
     debug(`PR event payload: ${JSON.stringify(pr)}`);
     return new PullRequest(pr);
+}
+function fetchPullRequestReviewers({ pr, }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getMyOctokit();
+        const response = yield octokit.rest.pulls.listRequestedReviewers({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            pull_number: pr.number,
+        });
+        debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+        return response.users.map((item) => item.login);
+    });
 }
 function validatePullRequest(pr) {
     if (pr.isDraft) {
@@ -35716,6 +35725,7 @@ function run() {
                 sageToken: (0,core.getInput)('sage-token', { required: false }),
             };
             let config;
+            debug('fetching config');
             try {
                 config = yield fetchConfig();
             }
@@ -35742,18 +35752,20 @@ function run() {
             }
             debug('Fetching changed files in the pull request');
             const changedFiles = yield fetchChangedFiles({ pr });
+            debug('Fetching pull request reviewers');
+            const requestedReviewerLogins = yield fetchPullRequestReviewers({ pr });
             const fileChangesGroups = reviewer_identifyFileChangeGroups({
                 fileChangesGroups: config.fileChangesGroups,
                 changedFiles,
             });
             info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
-            info(`Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(pr.requestedReviewerLogins)}`);
+            info(`Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(requestedReviewerLogins)}`);
             const reviewers = reviewer_identifyReviewers({
                 createdBy: author,
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins: pr.requestedReviewerLogins,
+                requestedReviewerLogins: requestedReviewerLogins,
             });
             info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
             const sageUsers = config.sageUsers || {};
