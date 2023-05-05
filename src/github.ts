@@ -48,12 +48,6 @@ class PullRequest {
   get baseBranchName(): string {
     return this._pr.base.ref;
   }
-
-  get requestedReviewerLogins(): string[] {
-    return (this._pr.requested_reviewers as { login: string }[]).map(
-      (label) => label.login,
-    );
-  }
 }
 
 export function getPullRequest(): PullRequest {
@@ -64,6 +58,21 @@ export function getPullRequest(): PullRequest {
   }
   debug(`PR event payload: ${JSON.stringify(pr)}`);
   return new PullRequest(pr);
+}
+
+export async function fetchPullRequestReviewers({
+  pr,
+}: {
+  pr: PullRequest;
+}): Promise<string[]> {
+  const octokit = getMyOctokit();
+  const response = await octokit.rest.pulls.listRequestedReviewers({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pull_number: pr.number,
+  });
+  debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+  return response.data.users.map((item: { login: string }) => item.login);
 }
 
 export function validatePullRequest(pr: PullRequest): string | null {
@@ -89,7 +98,7 @@ export function getInputs(): Inputs {
     comment: getInput('comment'),
     owner,
     repo,
-    pullRequestNumber: Number(getInput('pullRequestNumber', { required: true })),
+    pullRequestNumber: Number(getInput('pullRequestNumber', { required: false })),
     sha: getInput('sha', { required: true }),
     strategy: getInput('strategy', { required: true }) as Strategy,
     doNotMergeLabels: getInput('do-not-merge-labels'),
@@ -300,16 +309,28 @@ export async function getCIChecks(): Promise<Checks> {
   return response.data;
 }
 
-export async function createComment(
-  comment: string,
-): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
+export async function createComment({
+  comment,
+  pr,
+}: {
+  pr: PullRequest;
+  comment: string;
+}): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
   const octokit = getMyOctokit();
-  const inputs = getInputs();
+  let owner = context.repo.owner;
+  let repo = context.repo.repo;
+  let prNumber = pr.number;
+  if (!prNumber || !repo || !owner) {
+    const inputs = getInputs();
+    owner = inputs.owner;
+    repo = inputs.repo;
+    prNumber = inputs.pullRequestNumber;
+  }
 
   const response = await octokit.issues.createComment({
-    owner: inputs.owner,
-    repo: inputs.repo,
-    issue_number: inputs.pullRequestNumber,
+    owner,
+    repo,
+    issue_number: prNumber,
     body: comment,
   });
 
