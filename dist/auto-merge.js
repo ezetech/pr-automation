@@ -35154,7 +35154,7 @@ function fetchPullRequestReviewers({ pr, }) {
             pull_number: pr.number,
         });
         debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
-        return response.users.map((item) => item.login);
+        return response.data.users.map((item) => item.login);
     });
 }
 function validatePullRequest(pr) {

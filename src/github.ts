@@ -72,7 +72,7 @@ export async function fetchPullRequestReviewers({
     pull_number: pr.number,
   });
   debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
-  return response.users.map((item: { login: string }) => item.login);
+  return response.data.users.map((item: { login: string }) => item.login);
 }
 
 export function validatePullRequest(pr: PullRequest): string | null {
