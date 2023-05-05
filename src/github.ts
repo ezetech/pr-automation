@@ -408,8 +408,11 @@ export async function getCommitData(sha: string): Promise<CommitData> {
     error(`Response.status: ${response.status}`);
     throw new Error(JSON.stringify(response.data));
   }
+  const message = response.data.message;
+  const parents = response.data.parents;
+  debug(`getCommitData. message: ${message}. parents: ${parents}`);
   return {
-    message: response.data.message,
-    parents: response.data.parents,
+    message,
+    parents,
   };
 }

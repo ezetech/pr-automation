@@ -35432,7 +35432,6 @@ function getCommitData(sha) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
         debug(`Fetching commit data of sha ${sha}`);
-        // @todo: also validation needed;
         const response = yield octokit.request('GET /repos/{owner}/{repo}/git/commits/{commit_sha}', {
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
@@ -35442,9 +35441,12 @@ function getCommitData(sha) {
             error(`Response.status: ${response.status}`);
             throw new Error(JSON.stringify(response.data));
         }
+        const message = response.data.message;
+        const parents = response.data.parents;
+        debug(`getCommitData. message: ${message}. parents: ${parents}`);
         return {
-            message: response.data.message,
-            parents: response.data.parents,
+            message,
+            parents,
         };
     });
 }
@@ -35491,6 +35493,7 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     }
     if (ignoreReassignForMergedPRs && commitData) {
         const isMergePRCommit = checkIsMergePRCommit(commitData);
+        debug(`isMergePRCommit: ${isMergePRCommit}`);
         if (isMergePRCommit) {
             return false;
         }

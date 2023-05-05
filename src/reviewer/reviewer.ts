@@ -1,5 +1,5 @@
 import * as minimatch from 'minimatch';
-import { info } from '../logger';
+import { info, debug } from '../logger';
 import { Config, DefaultRules, Rule } from '../config/typings';
 import { getRandomItemFromArray } from '../utils';
 import { CommitData } from '../github';
@@ -38,6 +38,7 @@ export function shouldRequestReview({
   }
   if (ignoreReassignForMergedPRs && commitData) {
     const isMergePRCommit = checkIsMergePRCommit(commitData);
+    debug(`isMergePRCommit: ${isMergePRCommit}`);
     if (isMergePRCommit) {
       return false;
     }
