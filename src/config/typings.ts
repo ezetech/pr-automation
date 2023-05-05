@@ -12,8 +12,9 @@ export type DefaultRules = {
 };
 
 type Options = {
-  ignoredLabels: string[];
+  ignoredLabels?: string[];
   requiredChecks?: string[];
+  ignoreReassignForMergedPRs?: boolean;
   withMessage?: {
     messageId?: string;
   };
@@ -25,7 +26,7 @@ export type Config = {
   rulesByCreator: Record<string, Rule[]>;
   options?: Options;
   postReviewOptions?: {};
-  sageUsers: {};
+  sageUsers?: Record<string, { email: string }[]>;
 };
 
 export type ReviewerByState = {

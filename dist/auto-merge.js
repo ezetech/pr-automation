@@ -35034,7 +35034,8 @@ var lib = __nccwpck_require__(918);
 const schema = lib.object()
     .keys({
     options: lib.object({
-        ignoredLabels: lib.array().items(lib.string()),
+        ignoredLabels: lib.array().items(lib.string()).optional(),
+        ignoreReassignForMergedPRs: lib.boolean().optional(),
         requiredChecks: lib.array().items(lib.string()),
         withMessage: {
             messageId: lib.string().optional(),
@@ -35062,7 +35063,7 @@ const schema = lib.object()
         .pattern(lib.string(), lib.array().items(lib.object({
         email: lib.string().required(),
     })))
-        .required(),
+        .optional(),
 })
     .required()
     .options({ stripUnknown: true });
@@ -35079,8 +35080,8 @@ function validateConfig(configJson) {
 
 const isTest = process.env.NODE_ENV === 'test';
 const info = isTest ? () => { } : core.info;
-const error = isTest ? () => { } : core.error;
-const debug = isTest ? () => { } : core.debug;
+const logger_error = isTest ? () => { } : core.error;
+const logger_debug = isTest ? () => { } : core.debug;
 const logger_warning = isTest ? () => { } : core.warning;
 
 ;// CONCATENATED MODULE: ./src/github.ts
@@ -35142,7 +35143,7 @@ function getPullRequest() {
     if (!pr) {
         throw new Error('No pull_request data in context.payload');
     }
-    debug(`PR event payload: ${JSON.stringify(pr)}`);
+    logger_debug(`PR event payload: ${JSON.stringify(pr)}`);
     return new PullRequest(pr);
 }
 function fetchPullRequestReviewers({ pr, }) {
@@ -35153,7 +35154,7 @@ function fetchPullRequestReviewers({ pr, }) {
             repo: github.context.repo.repo,
             pull_number: pr.number,
         });
-        debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+        logger_debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
         return response.data.users.map((item) => item.login);
     });
 }
@@ -35203,7 +35204,7 @@ function fetchConfig() {
             ref: github.context.ref,
         });
         if (response.status !== 200) {
-            error(`Response.status: ${response.status}`);
+            logger_error(`Response.status: ${response.status}`);
             throw new Error(JSON.stringify(response.data));
         }
         const data = response.data;
@@ -35424,6 +35425,31 @@ function mergePullRequest(pr) {
         return response.data;
     });
 }
+function getLatestSha() {
+    return context.payload.after;
+}
+function getCommitData(sha) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getMyOctokit();
+        debug(`Fetching commit data of sha ${sha}`);
+        const response = yield octokit.request('GET /repos/{owner}/{repo}/git/commits/{commit_sha}', {
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            commit_sha: sha,
+        });
+        if (response.status !== 200) {
+            error(`Response.status: ${response.status}`);
+            throw new Error(JSON.stringify(response.data));
+        }
+        const message = response.data.message;
+        const parents = response.data.parents;
+        debug(`getCommitData. message: ${message}. parents: ${parents}`);
+        return {
+            message,
+            parents,
+        };
+    });
+}
 
 ;// CONCATENATED MODULE: ./src/utils.ts
 
@@ -35432,9 +35458,9 @@ function getRandomItemFromArray(items) {
 }
 function withDebugLog(executeFunction) {
     return function (param) {
-        debug(`[${executeFunction.name}]. Params: ${JSON.stringify(param)}`);
+        logger_debug(`[${executeFunction.name}]. Params: ${JSON.stringify(param)}`);
         const result = executeFunction(param);
-        debug(`[${executeFunction.name}]. Result: ${JSON.stringify(result)}`);
+        logger_debug(`[${executeFunction.name}]. Result: ${JSON.stringify(result)}`);
         return result;
     };
 }
@@ -35638,18 +35664,32 @@ var minimatch = __nccwpck_require__(3973);
 
 
 
-function shouldRequestReview({ isDraft, options, currentLabels, }) {
+function checkIsMergePRCommit({ parents, message }) {
+    if (parents.length < 2) {
+        return false;
+    }
+    return message.startsWith('Merge pull request');
+}
+function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     if (isDraft) {
         return false;
     }
     if (!options) {
         return true;
     }
+    const { ignoredLabels, ignoreReassignForMergedPRs } = options;
     const includesIgnoredLabels = currentLabels.some((currentLabel) => {
-        return options.ignoredLabels.includes(currentLabel);
+        return (ignoredLabels || []).includes(currentLabel);
     });
     if (includesIgnoredLabels) {
         return false;
+    }
+    if (ignoreReassignForMergedPRs && commitData) {
+        const isMergePRCommit = checkIsMergePRCommit(commitData);
+        logger_debug(`isMergePRCommit: ${isMergePRCommit}`);
+        if (isMergePRCommit) {
+            return false;
+        }
     }
     return true;
 }
@@ -35994,7 +36034,7 @@ function run() {
             info('Staring PR auto merging.');
             const inputs = getInputs();
             let config;
-            debug('fetching config');
+            logger_debug('fetching config');
             try {
                 config = yield fetchConfig();
             }
@@ -36013,9 +36053,9 @@ function run() {
                 return;
             }
             const { author, branchName } = pr;
-            debug('Fetching changed files in the pull request');
+            logger_debug('Fetching changed files in the pull request');
             const changedFiles = yield fetchChangedFiles({ pr });
-            debug('Fetching pull request reviewers');
+            logger_debug('Fetching pull request reviewers');
             const requestedReviewerLogins = yield fetchPullRequestReviewers({ pr });
             const fileChangesGroups = reviewer_identifyFileChangeGroups({
                 fileChangesGroups: config.fileChangesGroups,
@@ -36056,7 +36096,7 @@ function run() {
             core.setOutput('merged', true);
         }
         catch (err) {
-            error(err);
+            logger_error(err);
         }
         return;
     });

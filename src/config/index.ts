@@ -4,7 +4,8 @@ import { Config } from './typings';
 const schema = Joi.object<Config>()
   .keys({
     options: Joi.object({
-      ignoredLabels: Joi.array().items(Joi.string()),
+      ignoredLabels: Joi.array().items(Joi.string()).optional(),
+      ignoreReassignForMergedPRs: Joi.boolean().optional(),
       requiredChecks: Joi.array().items(Joi.string()),
       withMessage: {
         messageId: Joi.string().optional(),
@@ -47,7 +48,7 @@ const schema = Joi.object<Config>()
           }),
         ),
       )
-      .required(),
+      .optional(),
   })
   .required()
   .options({ stripUnknown: true });

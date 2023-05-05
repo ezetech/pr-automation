@@ -392,7 +392,7 @@ jobs:
 ```
 ### Configuration File
 
-In the configuration file you should add the `sageUsers` parameter with GitHub logins and Sage HR emails.
+In the configuration file you may add the `sageUsers` parameter with GitHub logins and Sage HR emails.
 
 ```yamlex
 options:
