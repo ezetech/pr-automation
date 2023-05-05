@@ -317,12 +317,20 @@ export async function createComment({
   comment: string;
 }): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
   const octokit = getMyOctokit();
-  const inputs = getInputs();
+  let owner = context.repo.owner;
+  let repo = context.repo.repo;
+  let prNumber = pr.number;
+  if (!prNumber || !repo || !owner) {
+    const inputs = getInputs();
+    owner = inputs.owner;
+    repo = inputs.repo;
+    prNumber = inputs.pullRequestNumber;
+  }
 
   const response = await octokit.issues.createComment({
-    owner: inputs.owner || context.repo.owner,
-    repo: inputs.repo || context.repo.repo,
-    issue_number: inputs.pullRequestNumber || pr.number,
+    owner,
+    repo,
+    issue_number: prNumber,
     body: comment,
   });
 

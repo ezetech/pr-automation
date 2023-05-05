@@ -35372,11 +35372,19 @@ function getCIChecks() {
 function createComment({ comment, pr, }) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
-        const inputs = getInputs();
+        let owner = github.context.repo.owner;
+        let repo = github.context.repo.repo;
+        let prNumber = pr.number;
+        if (!prNumber || !repo || !owner) {
+            const inputs = getInputs();
+            owner = inputs.owner;
+            repo = inputs.repo;
+            prNumber = inputs.pullRequestNumber;
+        }
         const response = yield octokit.issues.createComment({
-            owner: inputs.owner || github.context.repo.owner,
-            repo: inputs.repo || github.context.repo.repo,
-            issue_number: inputs.pullRequestNumber || pr.number,
+            owner,
+            repo,
+            issue_number: prNumber,
             body: comment,
         });
         if (response.status !== 201) {
