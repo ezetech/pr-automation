@@ -143,7 +143,7 @@ export async function run(): Promise<void> {
         await github.updateComment(existingCommentId, body);
       } else {
         debug('Creating comment');
-        await github.createComment(body);
+        await github.createComment({ comment: body, pr });
       }
       info(`Commenting on PR, body: "${body}"`);
     }

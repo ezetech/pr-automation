@@ -309,16 +309,20 @@ export async function getCIChecks(): Promise<Checks> {
   return response.data;
 }
 
-export async function createComment(
-  comment: string,
-): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
+export async function createComment({
+  comment,
+  pr,
+}: {
+  pr: PullRequest;
+  comment: string;
+}): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
   const octokit = getMyOctokit();
   const inputs = getInputs();
 
   const response = await octokit.issues.createComment({
-    owner: inputs.owner,
-    repo: inputs.repo,
-    issue_number: inputs.pullRequestNumber,
+    owner: inputs.owner || context.repo.owner,
+    repo: inputs.repo || context.repo.repo,
+    issue_number: inputs.pullRequestNumber || pr.number,
     body: comment,
   });
 

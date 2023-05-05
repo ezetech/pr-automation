@@ -35369,14 +35369,14 @@ function getCIChecks() {
         return response.data;
     });
 }
-function createComment(comment) {
+function createComment({ comment, pr, }) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
         const inputs = getInputs();
         const response = yield octokit.issues.createComment({
-            owner: inputs.owner,
-            repo: inputs.repo,
-            issue_number: inputs.pullRequestNumber,
+            owner: inputs.owner || github.context.repo.owner,
+            repo: inputs.repo || github.context.repo.repo,
+            issue_number: inputs.pullRequestNumber || pr.number,
             body: comment,
         });
         if (response.status !== 201) {
@@ -35816,7 +35816,7 @@ function run() {
                 }
                 else {
                     debug('Creating comment');
-                    yield createComment(body);
+                    yield createComment({ comment: body, pr });
                 }
                 info(`Commenting on PR, body: "${body}"`);
             }

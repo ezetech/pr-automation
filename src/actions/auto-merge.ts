@@ -74,7 +74,7 @@ export async function run(): Promise<void> {
     }
 
     if (inputs.comment) {
-      await github.createComment(inputs.comment);
+      await github.createComment({ comment: inputs.comment, pr });
     }
 
     await github.mergePullRequest(pr);
