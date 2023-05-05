@@ -89,7 +89,7 @@ describe('Should test identifyReviewers: ', () => {
       { reviewers: ['Quade'], required: 1 },
     ],
   };
-  it('Should assign proper reviewers for Bob. Should not ask himself for review', (done) => {
+  it('Should assign proper reviewers for Bob. Should not ask himself for review (1)', (done) => {
     const result = identifyReviewers({
       requestedReviewerLogins: [],
       createdBy: 'Bob',
@@ -102,6 +102,23 @@ describe('Should test identifyReviewers: ', () => {
     expect(result).to.include('Quade', 'Quade is required');
     expect(result).to.not.include('Bob', 'Bob should be absent');
     expect(result.length).to.be.equal(2);
+    done();
+  });
+  it('Should assign proper reviewers for Bob. Should not ask himself for review (2)', (done) => {
+    const times = 1000;
+    for (let i = 0; i < times; i++) {
+      const result = identifyReviewers({
+        requestedReviewerLogins: [],
+        createdBy: 'Bob',
+        rulesByCreator: {
+          Bob: [{ reviewers: ['Quade', 'Bob'], required: 1 }],
+        },
+        fileChangesGroups: ['file-group-2'],
+      });
+      expect(result).to.include('Quade', 'Quade is required');
+      expect(result).to.not.include('Bob', 'Bob should be absent');
+      expect(result.length).to.be.equal(1);
+    }
     done();
   });
   it('Should assign same reviewers for Bob 1000 times. Because 1 approver was already requested before', (done) => {
@@ -395,6 +412,53 @@ describe('should test shouldRequestReview:', () => {
       currentLabels: [],
     });
     expect(result).to.be.equal(false, 'Should not request review');
+  });
+  it('should not request review, cos merge commit detected', () => {
+    const result = shouldRequestReview({
+      isDraft: false,
+      currentLabels: [],
+      options: {
+        ignoreReassignForMergedPRs: true,
+      },
+      commitData: {
+        message: 'Merge pull request #10000 from repo/branch-1\n\nSome commit message',
+        parents: [
+          {
+            sha: 'sha1',
+            url: 'sha1url',
+            html_url: 'sha1url',
+          },
+          {
+            sha: 'sha2',
+            url: 'sha2url',
+            html_url: 'sha2url',
+          },
+        ],
+      },
+    });
+    expect(result).to.be.equal(false, 'Should not request review');
+  });
+  it('should request review, even though merge commit is present, but related option is disabled', () => {
+    const result = shouldRequestReview({
+      isDraft: false,
+      currentLabels: [],
+      commitData: {
+        message: 'Merge pull request #10000 from repo/branch-1\n\nSome commit message',
+        parents: [
+          {
+            sha: 'sha1',
+            url: 'sha1url',
+            html_url: 'sha1url',
+          },
+          {
+            sha: 'sha2',
+            url: 'sha2url',
+            html_url: 'sha2url',
+          },
+        ],
+      },
+    });
+    expect(result).to.be.equal(true, 'Should request review');
   });
   it('should not ignore PR (non-draft PR)', () => {
     const result = shouldRequestReview({

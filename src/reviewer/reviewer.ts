@@ -2,13 +2,24 @@ import * as minimatch from 'minimatch';
 import { info } from '../logger';
 import { Config, DefaultRules, Rule } from '../config/typings';
 import { getRandomItemFromArray } from '../utils';
+import { CommitData } from '../github';
+
+function checkIsMergePRCommit({ parents, message }: CommitData): boolean {
+  if (parents.length < 2) {
+    return false;
+  }
+
+  return message.startsWith('Merge pull request');
+}
 
 export function shouldRequestReview({
   isDraft,
   options,
+  commitData,
   currentLabels,
 }: {
   isDraft: boolean;
+  commitData?: CommitData;
   options?: Config['options'];
   currentLabels: string[];
 }): boolean {
@@ -18,11 +29,18 @@ export function shouldRequestReview({
   if (!options) {
     return true;
   }
+  const { ignoredLabels, ignoreReassignForMergedPRs } = options;
   const includesIgnoredLabels = currentLabels.some((currentLabel) => {
-    return options.ignoredLabels.includes(currentLabel);
+    return (ignoredLabels || []).includes(currentLabel);
   });
   if (includesIgnoredLabels) {
     return false;
+  }
+  if (ignoreReassignForMergedPRs && commitData) {
+    const isMergePRCommit = checkIsMergePRCommit(commitData);
+    if (isMergePRCommit) {
+      return false;
+    }
   }
 
   return true;

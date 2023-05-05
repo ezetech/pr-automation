@@ -9,7 +9,7 @@ import {
 } from '../reviewer';
 
 import { getEmployeesWhoAreOutToday } from '../sage';
-import { fetchPullRequestReviewers } from '../github';
+import { CommitData } from '../github';
 
 export async function run(): Promise<void> {
   try {
@@ -40,9 +40,16 @@ export async function run(): Promise<void> {
     const pr = github.getPullRequest();
     const { isDraft, author } = pr;
 
+    const latestSha = github.getLatestSha();
+    let commitData: undefined | CommitData;
+    if (config.options?.ignoreReassignForMergedPRs && latestSha) {
+      commitData = await github.getCommitData(latestSha);
+    }
+
     if (
       !shouldRequestReview({
         isDraft,
+        commitData,
         options: config.options,
         currentLabels: pr.labelNames,
       })
@@ -50,6 +57,7 @@ export async function run(): Promise<void> {
       info(
         `Matched the ignoring rules ${JSON.stringify({
           isDraft,
+          commitData,
           prLabels: pr.labelNames,
         })}; terminating the process.`,
       );
@@ -81,11 +89,7 @@ export async function run(): Promise<void> {
     });
     info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
 
-    const sageUsers: {
-      [key: string]: {
-        email: string;
-      }[];
-    } = config.sageUsers || {};
+    const sageUsers = config.sageUsers || {};
     let employeesWhoAreOutToday: string[] = [];
 
     if (inputs.checkReviewerOnSage) {

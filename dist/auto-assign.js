@@ -35042,7 +35042,8 @@ var lib = __nccwpck_require__(918);
 const schema = lib.object()
     .keys({
     options: lib.object({
-        ignoredLabels: lib.array().items(lib.string()),
+        ignoredLabels: lib.array().items(lib.string()).optional(),
+        ignoreReassignForMergedPRs: lib.boolean().optional(),
         requiredChecks: lib.array().items(lib.string()),
         withMessage: {
             messageId: lib.string().optional(),
@@ -35070,7 +35071,7 @@ const schema = lib.object()
         .pattern(lib.string(), lib.array().items(lib.object({
         email: lib.string().required(),
     })))
-        .required(),
+        .optional(),
 })
     .required()
     .options({ stripUnknown: true });
@@ -35424,6 +35425,29 @@ function mergePullRequest(pr) {
         return response.data;
     });
 }
+function getLatestSha() {
+    return github.context.payload.after;
+}
+function getCommitData(sha) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getMyOctokit();
+        debug(`Fetching commit data of sha ${sha}`);
+        // @todo: also validation needed;
+        const response = yield octokit.request('GET /repos/{owner}/{repo}/git/commits/{commit_sha}', {
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            commit_sha: sha,
+        });
+        if (response.status !== 200) {
+            error(`Response.status: ${response.status}`);
+            throw new Error(JSON.stringify(response.data));
+        }
+        return {
+            message: response.data.message,
+            parents: response.data.parents,
+        };
+    });
+}
 
 ;// CONCATENATED MODULE: ./src/utils.ts
 
@@ -35445,18 +35469,31 @@ var minimatch = __nccwpck_require__(3973);
 
 
 
-function shouldRequestReview({ isDraft, options, currentLabels, }) {
+function checkIsMergePRCommit({ parents, message }) {
+    if (parents.length < 2) {
+        return false;
+    }
+    return message.startsWith('Merge pull request');
+}
+function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     if (isDraft) {
         return false;
     }
     if (!options) {
         return true;
     }
+    const { ignoredLabels, ignoreReassignForMergedPRs } = options;
     const includesIgnoredLabels = currentLabels.some((currentLabel) => {
-        return options.ignoredLabels.includes(currentLabel);
+        return (ignoredLabels || []).includes(currentLabel);
     });
     if (includesIgnoredLabels) {
         return false;
+    }
+    if (ignoreReassignForMergedPRs && commitData) {
+        const isMergePRCommit = checkIsMergePRCommit(commitData);
+        if (isMergePRCommit) {
+            return false;
+        }
     }
     return true;
 }
@@ -35723,7 +35760,7 @@ var auto_assign_awaiter = (undefined && undefined.__awaiter) || function (thisAr
 
 
 function run() {
-    var _a, _b;
+    var _a, _b, _c;
     return auto_assign_awaiter(this, void 0, void 0, function* () {
         try {
             info('Starting pr auto assign.');
@@ -35747,13 +35784,20 @@ function run() {
             }
             const pr = getPullRequest();
             const { isDraft, author } = pr;
+            const latestSha = getLatestSha();
+            let commitData;
+            if (((_a = config.options) === null || _a === void 0 ? void 0 : _a.ignoreReassignForMergedPRs) && latestSha) {
+                commitData = yield getCommitData(latestSha);
+            }
             if (!reviewer_shouldRequestReview({
                 isDraft,
+                commitData,
                 options: config.options,
                 currentLabels: pr.labelNames,
             })) {
                 info(`Matched the ignoring rules ${JSON.stringify({
                     isDraft,
+                    commitData,
                     prLabels: pr.labelNames,
                 })}; terminating the process.`);
                 return;
@@ -35805,7 +35849,7 @@ function run() {
             }
             yield assignReviewers(pr, reviewersToAssign);
             info(`Requesting review to ${reviewersToAssign.join(', ')}`);
-            const messageId = (_b = (_a = config.options) === null || _a === void 0 ? void 0 : _a.withMessage) === null || _b === void 0 ? void 0 : _b.messageId;
+            const messageId = (_c = (_b = config.options) === null || _b === void 0 ? void 0 : _b.withMessage) === null || _c === void 0 ? void 0 : _c.messageId;
             debug(`messageId: ${messageId}`);
             if (messageId) {
                 const existingCommentId = yield getExistingCommentId(pr.number, messageId);

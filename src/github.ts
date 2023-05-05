@@ -382,3 +382,34 @@ export async function mergePullRequest(
 
   return response.data;
 }
+
+export function getLatestSha(): string {
+  return context.payload.after;
+}
+
+export type CommitData = {
+  message: string;
+  parents: unknown[];
+};
+
+export async function getCommitData(sha: string): Promise<CommitData> {
+  const octokit = getMyOctokit();
+  debug(`Fetching commit data of sha ${sha}`);
+
+  const response = await octokit.request(
+    'GET /repos/{owner}/{repo}/git/commits/{commit_sha}',
+    {
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      commit_sha: sha,
+    },
+  );
+  if (response.status !== 200) {
+    error(`Response.status: ${response.status}`);
+    throw new Error(JSON.stringify(response.data));
+  }
+  return {
+    message: response.data.message,
+    parents: response.data.parents,
+  };
+}
