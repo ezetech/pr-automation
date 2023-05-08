@@ -35563,8 +35563,12 @@ function areCIChecksPassed({ checks, requiredChecks, }) {
         const check = checks.check_runs.find((checkRun) => {
             return checkRun.name === name;
         });
-        if (check && (check.status !== 'completed' || check.conclusion !== 'success')) {
-            return `Waiting for "${name}" CI check to pass.`;
+        const error = `Waiting for "${name}" CI check to pass.`;
+        if (!check) {
+            return error;
+        }
+        if (check.status !== 'completed' || check.conclusion !== 'success') {
+            return error;
         }
     }
     return true;
