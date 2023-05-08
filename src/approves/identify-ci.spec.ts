@@ -186,6 +186,12 @@ describe('should test areCIChecksPassed: ', () => {
     expect(result).to.be.equal('Waiting for "test" CI check to pass.');
   });
 
+  it('should return error message if required CI check is not found', () => {
+    const result = areCIChecksPassed({ checks, requiredChecks: ['unknowncheck'] });
+
+    expect(result).to.be.equal('Waiting for "unknowncheck" CI check to pass.');
+  });
+
   it('should return true if required CI checks is completed', () => {
     const result = areCIChecksPassed({ checks, requiredChecks: ['test 2'] });
 
