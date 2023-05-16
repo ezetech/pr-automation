@@ -66,13 +66,21 @@ export async function fetchPullRequestReviewers({
   pr: PullRequest;
 }): Promise<string[]> {
   const octokit = getMyOctokit();
-  const response = await octokit.rest.pulls.listRequestedReviewers({
+  const response = await octokit.rest.pulls.listReviews({
     owner: context.repo.owner,
     repo: context.repo.repo,
     pull_number: pr.number,
   });
   debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
-  return response.data.users.map((item: { login: string }) => item.login);
+  const arr: Record<string, unknown>[] = response?.data?.users || [];
+  const obj = arr.reduce<Record<string, string>>((result, item) => {
+    const login = item?.login as string;
+    if (login) {
+      result[login] = login;
+    }
+    return result;
+  }, {});
+  return Object.values(obj);
 }
 
 export function validatePullRequest(pr: PullRequest): string | null {

@@ -35147,15 +35147,24 @@ function getPullRequest() {
     return new PullRequest(pr);
 }
 function fetchPullRequestReviewers({ pr, }) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
-        const response = yield octokit.rest.pulls.listRequestedReviewers({
+        const response = yield octokit.rest.pulls.listReviews({
             owner: github.context.repo.owner,
             repo: github.context.repo.repo,
             pull_number: pr.number,
         });
         debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
-        return response.data.users.map((item) => item.login);
+        const arr = ((_a = response === null || response === void 0 ? void 0 : response.data) === null || _a === void 0 ? void 0 : _a.users) || [];
+        const obj = arr.reduce((result, item) => {
+            const login = item === null || item === void 0 ? void 0 : item.login;
+            if (login) {
+                result[login] = login;
+            }
+            return result;
+        }, {});
+        return Object.values(obj);
     });
 }
 function validatePullRequest(pr) {
