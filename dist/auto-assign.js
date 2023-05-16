@@ -35146,7 +35146,19 @@ function getPullRequest() {
     debug(`PR event payload: ${JSON.stringify(pr)}`);
     return new PullRequest(pr);
 }
-function fetchPullRequestReviewers({ pr, }) {
+function fetchListRequestedReviewers({ pr, }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = getMyOctokit();
+        const response = yield octokit.rest.pulls.listRequestedReviewers({
+            owner: github.context.repo.owner,
+            repo: github.context.repo.repo,
+            pull_number: pr.number,
+        });
+        debug(`fetchListRequestedReviewers response ${JSON.stringify(response)}`);
+        return response.data.users.map((item) => item.login);
+    });
+}
+function fetchListReviews({ pr }) {
     var _a;
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
@@ -35155,7 +35167,7 @@ function fetchPullRequestReviewers({ pr, }) {
             repo: github.context.repo.repo,
             pull_number: pr.number,
         });
-        debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+        debug(`fetchListReviews response ${JSON.stringify(response)}`);
         const arr = ((_a = response === null || response === void 0 ? void 0 : response.data) === null || _a === void 0 ? void 0 : _a.users) || [];
         const obj = arr.reduce((result, item) => {
             const login = item === null || item === void 0 ? void 0 : item.login;
@@ -35165,6 +35177,17 @@ function fetchPullRequestReviewers({ pr, }) {
             return result;
         }, {});
         return Object.values(obj);
+    });
+}
+function fetchPullRequestReviewers({ pr }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const [arr1, arr2] = yield Promise.all([
+            fetchListRequestedReviewers({ pr }),
+            fetchListReviews({ pr }),
+        ]);
+        const concatenatedArray = arr1.concat(arr2);
+        const uniqueStrings = [...new Set(concatenatedArray)];
+        return uniqueStrings;
     });
 }
 function validatePullRequest(pr) {

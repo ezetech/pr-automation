@@ -60,18 +60,29 @@ export function getPullRequest(): PullRequest {
   return new PullRequest(pr);
 }
 
-export async function fetchPullRequestReviewers({
+async function fetchListRequestedReviewers({
   pr,
 }: {
   pr: PullRequest;
 }): Promise<string[]> {
+  const octokit = getMyOctokit();
+  const response = await octokit.rest.pulls.listRequestedReviewers({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pull_number: pr.number,
+  });
+  debug(`fetchListRequestedReviewers response ${JSON.stringify(response)}`);
+  return response.data.users.map((item: { login: string }) => item.login);
+}
+
+export async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> {
   const octokit = getMyOctokit();
   const response = await octokit.rest.pulls.listReviews({
     owner: context.repo.owner,
     repo: context.repo.repo,
     pull_number: pr.number,
   });
-  debug(`listRequestedReviewers response ${JSON.stringify(response)}`);
+  debug(`fetchListReviews response ${JSON.stringify(response)}`);
   const arr: Record<string, unknown>[] = response?.data?.users || [];
   const obj = arr.reduce<Record<string, string>>((result, item) => {
     const login = item?.login as string;
@@ -81,6 +92,16 @@ export async function fetchPullRequestReviewers({
     return result;
   }, {});
   return Object.values(obj);
+}
+
+export async function fetchPullRequestReviewers({ pr }: { pr: PullRequest }) {
+  const [arr1, arr2] = await Promise.all([
+    fetchListRequestedReviewers({ pr }),
+    fetchListReviews({ pr }),
+  ]);
+  const concatenatedArray = arr1.concat(arr2);
+  const uniqueStrings = [...new Set(concatenatedArray)];
+  return uniqueStrings;
 }
 
 export function validatePullRequest(pr: PullRequest): string | null {
