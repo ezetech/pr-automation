@@ -97,6 +97,7 @@ describe('Should test identifyReviewers: ', () => {
         Bob: [{ reviewers: ['Calvin', 'Quade', 'Bob'], required: 1 }],
       },
       fileChangesGroups: ['file-group-2'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Calvin', 'Calvin is required');
     expect(result).to.include('Quade', 'Quade is required');
@@ -114,6 +115,7 @@ describe('Should test identifyReviewers: ', () => {
           Bob: [{ reviewers: ['Quade', 'Bob'], required: 1 }],
         },
         fileChangesGroups: ['file-group-2'],
+        absentReviewersLogins: [],
       });
       expect(result).to.include('Quade', 'Quade is required');
       expect(result).to.not.include('Bob', 'Bob should be absent');
@@ -144,6 +146,7 @@ describe('Should test identifyReviewers: ', () => {
           ],
         },
         fileChangesGroups: ['file-group-2'],
+        absentReviewersLogins: [],
       });
       expect(result).to.include('Quade', 'Quade is required');
       expect(result.length).to.be.equal(1);
@@ -175,6 +178,7 @@ describe('Should test identifyReviewers: ', () => {
           ],
         },
         fileChangesGroups: ['file-group-2'],
+        absentReviewersLogins: [],
       });
       expect(result).to.include('Colin', 'Colin is required');
       expect(result).to.include('Quade', 'Quade is required');
@@ -211,6 +215,7 @@ describe('Should test identifyReviewers: ', () => {
         },
         rulesByCreator: {},
         fileChangesGroups: ['file-group-1'],
+        absentReviewersLogins: [],
       });
       expect(result).to.include('Colin', 'Colin is required');
       expect(result).to.include('Quade', 'Quade is required');
@@ -248,6 +253,7 @@ describe('Should test identifyReviewers: ', () => {
         },
         rulesByCreator: {},
         fileChangesGroups: ['file-group-1'],
+        absentReviewersLogins: [],
       });
       expect(result).to.include('Colin', 'Colin is required');
       expect(result.length).to.be.equal(1);
@@ -260,6 +266,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Vinny',
       rulesByCreator,
       fileChangesGroups: ['file-group-2'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Hank', 'Hank is required');
     expect(result).to.include('Quade', 'Quade is required');
@@ -280,6 +287,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Vinny',
       rulesByCreator,
       fileChangesGroups: ['file-group-2', 'file-group-1'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Hank', 'Hank is required');
     expect(result).to.include('Quade', 'Quade is required');
@@ -300,6 +308,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Vinny',
       rulesByCreator,
       fileChangesGroups: ['file-group-2', 'file-group-common'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Hank', 'Hank is required');
     expect(result).to.include('Quade', 'Quade is required');
@@ -320,6 +329,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Alfred',
       rulesByCreator,
       fileChangesGroups: ['file-group-common'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Calvin', 'Calvin is required');
     expect(result).to.include('Quade', 'Quade is required');
@@ -336,6 +346,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Alfred',
       rulesByCreator,
       fileChangesGroups: ['file-group-1'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Calvin', 'Calvin is required');
     expect(result).to.include('Quade', 'Quade is required');
@@ -352,8 +363,22 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'unknown',
       rulesByCreator,
       fileChangesGroups: ['file-group-common'],
+      absentReviewersLogins: [],
     });
     expect(result).to.be.deep.equal([], 'Array should be empty');
+    done();
+  });
+  it('Should not assign absent reviewers', (done) => {
+    const result = identifyReviewers({
+      requestedReviewerLogins: ['Calvin'],
+      createdBy: 'Bob',
+      rulesByCreator: {
+        Bob: [{ reviewers: ['Calvin', 'Quade', 'Bob'], required: 1 }],
+      },
+      fileChangesGroups: ['file-group-common'],
+      absentReviewersLogins: ['Calvin'],
+    });
+    expect(result).to.not.include('Calvin', 'Hank should be absent');
     done();
   });
   it('Should assign proper reviewers for Tobias by using default rules. file-group-1 changed', (done) => {
@@ -367,6 +392,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Tobias',
       rulesByCreator,
       fileChangesGroups: ['file-group-1'],
+      absentReviewersLogins: [],
     });
     expect(result).to.include('Calvin', 'Calvin is required');
     expect(result.length).to.be.equal(1);
@@ -391,6 +417,7 @@ describe('Should test identifyReviewers: ', () => {
       createdBy: 'Tobias',
       rulesByCreator,
       fileChangesGroups: ['file-group-2', 'file-group-common'],
+      absentReviewersLogins: [],
     });
     const rest = ['Duffy', 'Chris', 'Don'];
     const twoRest = result.filter((item) => rest.includes(item));

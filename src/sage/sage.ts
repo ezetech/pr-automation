@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { info } from '../logger';
+import { info, warning } from '../logger';
 import { SageOutOfOfficeToday } from '../config/typings';
 
 export async function getEmployeesWhoAreOutToday({
@@ -9,26 +9,33 @@ export async function getEmployeesWhoAreOutToday({
   sageBaseUrl: string;
   sageToken: string;
 }): Promise<string[]> {
-  const client = sageClient({
-    sageBaseUrl,
-    sageToken,
-  });
-
-  const date = new Date().toISOString().split('T')[0];
-  const result: string[] = [];
-
-  const sageResponse: SageOutOfOfficeToday | undefined = await client(
-    `leave-management/out-of-office-today?date=${date}`,
-    'GET',
-  );
-
-  if (sageResponse !== undefined && sageResponse.data.length > 0) {
-    sageResponse.data.forEach((response) => {
-      result.push(response.employee.email);
+  try {
+    const client = sageClient({
+      sageBaseUrl,
+      sageToken,
     });
-  }
 
-  return result;
+    const date = new Date().toISOString().split('T')[0];
+    const result: string[] = [];
+
+    const sageResponse: SageOutOfOfficeToday | undefined = await client(
+      `leave-management/out-of-office-today?date=${date}`,
+      'GET',
+    );
+
+    if (sageResponse !== undefined && sageResponse.data.length > 0) {
+      sageResponse.data.forEach((response) => {
+        result.push(response.employee.email);
+      });
+    }
+
+    info(`Employees reviewers who don't work today: ${result.join(', ')}`);
+
+    return result;
+  } catch (err) {
+    warning('Sage Error: ' + JSON.stringify(err, null, 2));
+    return [];
+  }
 }
 
 function sageClient({

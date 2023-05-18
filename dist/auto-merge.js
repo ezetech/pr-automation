@@ -35780,7 +35780,10 @@ function reviewer_identifyReviewersByDefaultRules({ byFileGroups, fileChangesGro
     });
     return [...set];
 }
-function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, }) {
+function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, absentReviewersLogins, }) {
+    const availableRequestedReviewers = requestedReviewerLogins.filter((reviewer) => {
+        return !absentReviewersLogins.includes(reviewer);
+    });
     const rules = rulesByCreator[createdBy];
     if (!rules) {
         info(`No rules for creator ${createdBy} were found.`);
@@ -35790,7 +35793,7 @@ function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGrou
                 byFileGroups: defaultRules.byFileGroups,
                 fileChangesGroups,
                 createdBy,
-                requestedReviewerLogins,
+                requestedReviewerLogins: availableRequestedReviewers,
             });
         }
         else {
@@ -35811,9 +35814,11 @@ function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGrou
         }
         const reviewers = getReviewersBasedOnRule({
             assign: rule.assign,
-            reviewers: rule.reviewers,
+            reviewers: rule.reviewers.filter((reviewer) => {
+                return !absentReviewersLogins.includes(reviewer);
+            }),
             createdBy,
-            requestedReviewerLogins,
+            requestedReviewerLogins: availableRequestedReviewers,
         });
         reviewers.forEach((reviewer) => result.add(reviewer));
     });

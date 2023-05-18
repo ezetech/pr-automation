@@ -35583,7 +35583,10 @@ function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, crea
     });
     return [...set];
 }
-function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, }) {
+function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, absentReviewersLogins, }) {
+    const availableRequestedReviewers = requestedReviewerLogins.filter((reviewer) => {
+        return !absentReviewersLogins.includes(reviewer);
+    });
     const rules = rulesByCreator[createdBy];
     if (!rules) {
         info(`No rules for creator ${createdBy} were found.`);
@@ -35593,7 +35596,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
                 byFileGroups: defaultRules.byFileGroups,
                 fileChangesGroups,
                 createdBy,
-                requestedReviewerLogins,
+                requestedReviewerLogins: availableRequestedReviewers,
             });
         }
         else {
@@ -35614,9 +35617,11 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
         }
         const reviewers = getReviewersBasedOnRule({
             assign: rule.assign,
-            reviewers: rule.reviewers,
+            reviewers: rule.reviewers.filter((reviewer) => {
+                return !absentReviewersLogins.includes(reviewer);
+            }),
             createdBy,
-            requestedReviewerLogins,
+            requestedReviewerLogins: availableRequestedReviewers,
         });
         reviewers.forEach((reviewer) => result.add(reviewer));
     });
@@ -35735,19 +35740,26 @@ var sage_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
 
 function getEmployeesWhoAreOutToday({ sageBaseUrl, sageToken, }) {
     return sage_awaiter(this, void 0, void 0, function* () {
-        const client = sageClient({
-            sageBaseUrl,
-            sageToken,
-        });
-        const date = new Date().toISOString().split('T')[0];
-        const result = [];
-        const sageResponse = yield client(`leave-management/out-of-office-today?date=${date}`, 'GET');
-        if (sageResponse !== undefined && sageResponse.data.length > 0) {
-            sageResponse.data.forEach((response) => {
-                result.push(response.employee.email);
+        try {
+            const client = sageClient({
+                sageBaseUrl,
+                sageToken,
             });
+            const date = new Date().toISOString().split('T')[0];
+            const result = [];
+            const sageResponse = yield client(`leave-management/out-of-office-today?date=${date}`, 'GET');
+            if (sageResponse !== undefined && sageResponse.data.length > 0) {
+                sageResponse.data.forEach((response) => {
+                    result.push(response.employee.email);
+                });
+            }
+            info(`Employees reviewers who don't work today: ${result.join(', ')}`);
+            return result;
         }
-        return result;
+        catch (err) {
+            logger_warning('Sage Error: ' + JSON.stringify(err, null, 2));
+            return [];
+        }
     });
 }
 function sageClient({ sageBaseUrl, sageToken, }) {
@@ -35847,43 +35859,32 @@ function run() {
             });
             info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
             info(`Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(requestedReviewerLogins)}`);
+            const absentEmployeesToday = inputs.checkReviewerOnSage
+                ? yield sage_getEmployeesWhoAreOutToday({
+                    sageBaseUrl: inputs.sageUrl,
+                    sageToken: inputs.sageToken,
+                })
+                : [];
+            const sageUsers = config.sageUsers || {};
+            const absentReviewersLogins = requestedReviewerLogins.filter((reviewer) => {
+                const sageUser = sageUsers[reviewer];
+                return sageUser && absentEmployeesToday.includes(sageUser[0].email);
+            });
             const reviewers = reviewer_identifyReviewers({
                 createdBy: author,
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
                 requestedReviewerLogins: requestedReviewerLogins,
+                absentReviewersLogins: absentReviewersLogins,
             });
             info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
-            const sageUsers = config.sageUsers || {};
-            let employeesWhoAreOutToday = [];
-            if (inputs.checkReviewerOnSage) {
-                try {
-                    employeesWhoAreOutToday = yield sage_getEmployeesWhoAreOutToday({
-                        sageBaseUrl: inputs.sageUrl,
-                        sageToken: inputs.sageToken,
-                    });
-                    info(`Employees reviewers who don't work today: ${employeesWhoAreOutToday.join(', ')}`);
-                }
-                catch (err) {
-                    logger_warning('Sage Error: ' + JSON.stringify(err, null, 2));
-                }
-            }
-            const reviewersToAssign = reviewers.filter((reviewer) => {
-                if (reviewer === author) {
-                    return false;
-                }
-                if (sageUsers[reviewer]) {
-                    return !employeesWhoAreOutToday.includes(sageUsers[reviewer][0].email);
-                }
-                return true;
-            });
-            if (reviewersToAssign.length === 0) {
+            if (reviewers.length === 0) {
                 info(`No reviewers were matched for author ${author}. Terminating the process`);
                 return;
             }
-            yield assignReviewers(pr, reviewersToAssign);
-            info(`Requesting review to ${reviewersToAssign.join(', ')}`);
+            yield assignReviewers(pr, reviewers);
+            info(`Requesting review to ${reviewers.join(', ')}`);
             const messageId = (_c = (_b = config.options) === null || _b === void 0 ? void 0 : _b.withMessage) === null || _c === void 0 ? void 0 : _c.messageId;
             debug(`messageId: ${messageId}`);
             if (messageId) {
@@ -35894,7 +35895,7 @@ function run() {
                     fileChangesGroups,
                     rulesByCreator: config.rulesByCreator,
                     defaultRules: config.defaultRules,
-                    reviewersToAssign,
+                    reviewersToAssign: reviewers,
                 });
                 const body = `${messageId}\n\n${message}`;
                 if (existingCommentId) {

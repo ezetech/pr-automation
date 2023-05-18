@@ -127,13 +127,18 @@ export function identifyReviewers({
   fileChangesGroups,
   defaultRules,
   requestedReviewerLogins,
+  absentReviewersLogins,
 }: {
   createdBy: string;
   rulesByCreator: Config['rulesByCreator'];
   defaultRules?: Config['defaultRules'];
   fileChangesGroups: string[];
   requestedReviewerLogins: string[];
+  absentReviewersLogins: string[];
 }): string[] {
+  const availableRequestedReviewers = requestedReviewerLogins.filter((reviewer) => {
+    return !absentReviewersLogins.includes(reviewer);
+  });
   const rules = rulesByCreator[createdBy];
   if (!rules) {
     info(`No rules for creator ${createdBy} were found.`);
@@ -143,7 +148,7 @@ export function identifyReviewers({
         byFileGroups: defaultRules.byFileGroups,
         fileChangesGroups,
         createdBy,
-        requestedReviewerLogins,
+        requestedReviewerLogins: availableRequestedReviewers,
       });
     } else {
       return [];
@@ -168,9 +173,11 @@ export function identifyReviewers({
     }
     const reviewers = getReviewersBasedOnRule({
       assign: rule.assign,
-      reviewers: rule.reviewers,
+      reviewers: rule.reviewers.filter((reviewer) => {
+        return !absentReviewersLogins.includes(reviewer);
+      }),
       createdBy,
-      requestedReviewerLogins,
+      requestedReviewerLogins: availableRequestedReviewers,
     });
     reviewers.forEach((reviewer) => result.add(reviewer));
   });
