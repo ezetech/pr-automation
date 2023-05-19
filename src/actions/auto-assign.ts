@@ -10,6 +10,7 @@ import {
 
 import { getEmployeesWhoAreOutToday } from '../sage';
 import { CommitData } from '../github';
+import { convertSageEmailsToUsernames } from '../utils';
 
 export async function run(): Promise<void> {
   try {
@@ -80,17 +81,16 @@ export async function run(): Promise<void> {
       )}`,
     );
 
-    const absentEmployeesToday: string[] = inputs.checkReviewerOnSage
+    const absentEmployeesEmails: string[] = inputs.checkReviewerOnSage
       ? await getEmployeesWhoAreOutToday({
           sageBaseUrl: inputs.sageUrl,
           sageToken: inputs.sageToken,
         })
       : [];
 
-    const sageUsers = config.sageUsers || {};
-    const absentReviewersLogins = requestedReviewerLogins.filter((reviewer) => {
-      const sageUser = sageUsers[reviewer];
-      return sageUser && absentEmployeesToday.includes(sageUser[0].email);
+    const absentReviewersLogins = convertSageEmailsToUsernames({
+      configSageUsers: config.sageUsers,
+      emailsList: absentEmployeesEmails,
     });
 
     const reviewers = identifyReviewers({
@@ -99,7 +99,7 @@ export async function run(): Promise<void> {
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
       requestedReviewerLogins: requestedReviewerLogins,
-      absentReviewersLogins: absentReviewersLogins,
+      absentReviewersLogins,
     });
     info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
 
