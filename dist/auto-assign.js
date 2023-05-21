@@ -35496,6 +35496,19 @@ function withDebugLog(executeFunction) {
         return result;
     };
 }
+function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
+    if (!configSageUsers) {
+        return [];
+    }
+    const loginsFromEmails = Object.keys(configSageUsers).reduce((logins, login) => {
+        const email = configSageUsers[login][0].email;
+        if (emailsList.includes(email)) {
+            logins.push(login);
+        }
+        return logins;
+    }, []);
+    return loginsFromEmails;
+}
 
 // EXTERNAL MODULE: ./node_modules/minimatch/minimatch.js
 var minimatch = __nccwpck_require__(3973);
@@ -35532,18 +35545,18 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     }
     return true;
 }
-function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, }) {
+function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const result = new Set();
+    const availableReviewers = reviewers.filter((reviewer) => {
+        if (reviewer === createdBy) {
+            return false;
+        }
+        return !absentReviewersLogins.includes(reviewer);
+    });
     if (!assign) {
-        reviewers.forEach((reviewer) => {
-            if (reviewer === createdBy) {
-                return;
-            }
-            return result.add(reviewer);
-        });
-        return result;
+        return availableReviewers;
     }
-    const preselectAlreadySelectedReviewers = reviewers.reduce((alreadySelectedReviewers, reviewer) => {
+    const preselectAlreadySelectedReviewers = availableReviewers.reduce((alreadySelectedReviewers, reviewer) => {
         const alreadyRequested = requestedReviewerLogins.includes(reviewer);
         if (alreadyRequested) {
             alreadySelectedReviewers.push(reviewer);
@@ -35552,7 +35565,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
     }, []);
     const selectedList = [...preselectAlreadySelectedReviewers];
     while (selectedList.length < assign) {
-        const reviewersWithoutRandomlySelected = reviewers.filter((reviewer) => {
+        const reviewersWithoutRandomlySelected = availableReviewers.filter((reviewer) => {
             return !selectedList.includes(reviewer);
         });
         const randomReviewer = getRandomItemFromArray(reviewersWithoutRandomlySelected);
@@ -35563,7 +35576,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
     });
     return result;
 }
-function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, requestedReviewerLogins, }) {
+function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const rulesByFileGroup = byFileGroups;
     const set = new Set();
     fileChangesGroups.forEach((fileGroup) => {
@@ -35577,6 +35590,7 @@ function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, crea
                 reviewers: rule.reviewers,
                 requestedReviewerLogins,
                 createdBy,
+                absentReviewersLogins,
             });
             reviewers.forEach((reviewer) => set.add(reviewer));
         });
@@ -35584,9 +35598,6 @@ function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, crea
     return [...set];
 }
 function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, absentReviewersLogins, }) {
-    const availableRequestedReviewers = requestedReviewerLogins.filter((reviewer) => {
-        return !absentReviewersLogins.includes(reviewer);
-    });
     const rules = rulesByCreator[createdBy];
     if (!rules) {
         info(`No rules for creator ${createdBy} were found.`);
@@ -35596,7 +35607,8 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
                 byFileGroups: defaultRules.byFileGroups,
                 fileChangesGroups,
                 createdBy,
-                requestedReviewerLogins: availableRequestedReviewers,
+                requestedReviewerLogins,
+                absentReviewersLogins,
             });
         }
         else {
@@ -35617,11 +35629,10 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
         }
         const reviewers = getReviewersBasedOnRule({
             assign: rule.assign,
-            reviewers: rule.reviewers.filter((reviewer) => {
-                return !absentReviewersLogins.includes(reviewer);
-            }),
+            reviewers: rule.reviewers,
             createdBy,
-            requestedReviewerLogins: availableRequestedReviewers,
+            requestedReviewerLogins,
+            absentReviewersLogins,
         });
         reviewers.forEach((reviewer) => result.add(reviewer));
     });
@@ -35806,6 +35817,7 @@ var auto_assign_awaiter = (undefined && undefined.__awaiter) || function (thisAr
 
 
 
+
 function run() {
     var _a, _b, _c;
     return auto_assign_awaiter(this, void 0, void 0, function* () {
@@ -35859,32 +35871,31 @@ function run() {
             });
             info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
             info(`Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(requestedReviewerLogins)}`);
-            const absentEmployeesToday = inputs.checkReviewerOnSage
+            const absentEmployeesEmails = inputs.checkReviewerOnSage
                 ? yield sage_getEmployeesWhoAreOutToday({
                     sageBaseUrl: inputs.sageUrl,
                     sageToken: inputs.sageToken,
                 })
                 : [];
-            const sageUsers = config.sageUsers || {};
-            const absentReviewersLogins = requestedReviewerLogins.filter((reviewer) => {
-                const sageUser = sageUsers[reviewer];
-                return sageUser && absentEmployeesToday.includes(sageUser[0].email);
+            const absentReviewersLogins = convertSageEmailsToUsernames({
+                configSageUsers: config.sageUsers,
+                emailsList: absentEmployeesEmails,
             });
-            const reviewers = reviewer_identifyReviewers({
+            const reviewersToAssign = reviewer_identifyReviewers({
                 createdBy: author,
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins: requestedReviewerLogins,
-                absentReviewersLogins: absentReviewersLogins,
+                requestedReviewerLogins,
+                absentReviewersLogins,
             });
-            info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
-            if (reviewers.length === 0) {
+            info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);
+            if (reviewersToAssign.length === 0) {
                 info(`No reviewers were matched for author ${author}. Terminating the process`);
                 return;
             }
-            yield assignReviewers(pr, reviewers);
-            info(`Requesting review to ${reviewers.join(', ')}`);
+            yield assignReviewers(pr, reviewersToAssign);
+            info(`Requesting review to ${reviewersToAssign.join(', ')}`);
             const messageId = (_c = (_b = config.options) === null || _b === void 0 ? void 0 : _b.withMessage) === null || _c === void 0 ? void 0 : _c.messageId;
             debug(`messageId: ${messageId}`);
             if (messageId) {
@@ -35895,7 +35906,7 @@ function run() {
                     fileChangesGroups,
                     rulesByCreator: config.rulesByCreator,
                     defaultRules: config.defaultRules,
-                    reviewersToAssign: reviewers,
+                    reviewersToAssign,
                 });
                 const body = `${messageId}\n\n${message}`;
                 if (existingCommentId) {

@@ -98,7 +98,7 @@ export async function run(): Promise<void> {
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins: requestedReviewerLogins,
+      requestedReviewerLogins,
       absentReviewersLogins,
     });
     info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);
