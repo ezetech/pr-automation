@@ -23,7 +23,7 @@ describe('Should test convertSageEmailsToUsernames: ', () => {
       },
       emailsList: ['dragon@gmail.com', 'dog@gmail.com'],
     });
-    expect(result).deep.equal(['dog'], 'msg1');
+    expect(result).deep.equal(['dog'], 'Github user "dog" from config is absent');
     done();
   });
   it('should return empty array', (done) => {
@@ -47,7 +47,7 @@ describe('Should test convertSageEmailsToUsernames: ', () => {
       },
       emailsList: ['dragon@gmail.com', 'human@gmail.com'],
     });
-    expect(result).deep.equal([], 'msg1');
+    expect(result).deep.equal([], 'Array is empty. All reviewers are available');
     done();
   });
 });

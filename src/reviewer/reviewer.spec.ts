@@ -368,9 +368,9 @@ describe('Should test identifyReviewers: ', () => {
     expect(result).to.be.deep.equal([], 'Array should be empty');
     done();
   });
-  it('Should not assign absent reviewers', (done) => {
+  it('Should not assign absent reviewers from rulesByCreator list', (done) => {
     const result = identifyReviewers({
-      requestedReviewerLogins: ['Calvin'],
+      requestedReviewerLogins: [],
       createdBy: 'Bob',
       rulesByCreator: {
         Bob: [{ reviewers: ['Calvin', 'Quade', 'Bob'], required: 1 }],
@@ -378,7 +378,21 @@ describe('Should test identifyReviewers: ', () => {
       fileChangesGroups: ['file-group-common'],
       absentReviewersLogins: ['Calvin'],
     });
-    expect(result).to.not.include('Calvin', 'Hank should be absent');
+    expect(result).to.not.include(
+      'Calvin',
+      'Calvin from rulesByCreator should be absent',
+    );
+    done();
+  });
+  it('Should not reassign absent reviewers', (done) => {
+    const result = identifyReviewers({
+      requestedReviewerLogins: ['Robin', 'Arthur'],
+      createdBy: 'Bob',
+      rulesByCreator,
+      fileChangesGroups: ['file-group-common'],
+      absentReviewersLogins: ['Robin'],
+    });
+    expect(result).to.not.include('Robin', 'Robin should not be reassign');
     done();
   });
   it('Should assign proper reviewers for Tobias by using default rules. file-group-1 changed', (done) => {

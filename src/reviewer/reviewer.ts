@@ -60,7 +60,10 @@ function getReviewersBasedOnRule({
 }) {
   const result = new Set<string>();
   const availableReviewers = reviewers.filter((reviewer) => {
-    return !(absentReviewersLogins.includes(reviewer) || reviewer === createdBy);
+    if (reviewer === createdBy) {
+      return false;
+    }
+    return !absentReviewersLogins.includes(reviewer);
   });
   if (!assign) {
     return availableReviewers;
@@ -173,9 +176,7 @@ export function identifyReviewers({
     }
     const reviewers = getReviewersBasedOnRule({
       assign: rule.assign,
-      reviewers: rule.reviewers.filter((reviewer) => {
-        return !absentReviewersLogins.includes(reviewer);
-      }),
+      reviewers: rule.reviewers,
       createdBy,
       requestedReviewerLogins,
       absentReviewersLogins,

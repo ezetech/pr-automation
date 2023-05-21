@@ -93,7 +93,7 @@ export async function run(): Promise<void> {
       emailsList: absentEmployeesEmails,
     });
 
-    const reviewers = identifyReviewers({
+    const reviewersToAssign = identifyReviewers({
       createdBy: author,
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
@@ -101,15 +101,15 @@ export async function run(): Promise<void> {
       requestedReviewerLogins: requestedReviewerLogins,
       absentReviewersLogins,
     });
-    info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
+    info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);
 
-    if (reviewers.length === 0) {
+    if (reviewersToAssign.length === 0) {
       info(`No reviewers were matched for author ${author}. Terminating the process`);
       return;
     }
-    await github.assignReviewers(pr, reviewers);
+    await github.assignReviewers(pr, reviewersToAssign);
 
-    info(`Requesting review to ${reviewers.join(', ')}`);
+    info(`Requesting review to ${reviewersToAssign.join(', ')}`);
 
     const messageId = config.options?.withMessage?.messageId;
     debug(`messageId: ${messageId}`);
@@ -121,7 +121,7 @@ export async function run(): Promise<void> {
         fileChangesGroups,
         rulesByCreator: config.rulesByCreator,
         defaultRules: config.defaultRules,
-        reviewersToAssign: reviewers,
+        reviewersToAssign,
       });
       const body = `${messageId}\n\n${message}`;
       if (existingCommentId) {
