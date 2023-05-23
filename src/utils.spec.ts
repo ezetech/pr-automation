@@ -26,7 +26,7 @@ describe('Should test convertSageEmailsToUsernames: ', () => {
     expect(result).deep.equal(['dog'], 'Github user "dog" from config is absent');
     done();
   });
-  it('should return empty array', (done) => {
+  it("should return empty array cos doesn't match email to username", (done) => {
     const result = convertSageEmailsToUsernames({
       configSageUsers: {
         duck: [
@@ -47,7 +47,7 @@ describe('Should test convertSageEmailsToUsernames: ', () => {
       },
       emailsList: ['dragon@gmail.com', 'human@gmail.com'],
     });
-    expect(result).deep.equal([], 'Array is empty. All reviewers are available');
+    expect(result).deep.equal([]);
     done();
   });
 });
