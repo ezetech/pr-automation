@@ -35155,7 +35155,9 @@ function fetchListRequestedReviewers({ pr, }) {
             pull_number: pr.number,
         });
         debug(`fetchListRequestedReviewers response ${JSON.stringify(response)}`);
-        return response.data.users.map((item) => item.login);
+        const result = response.data.users.map((item) => item.login);
+        debug(`fetchListRequestedReviewers result ${JSON.stringify(result)}`);
+        return result;
     });
 }
 function fetchListReviews({ pr }) {
@@ -35176,7 +35178,9 @@ function fetchListReviews({ pr }) {
             }
             return result;
         }, {});
-        return Object.values(obj);
+        const result = Object.values(obj);
+        debug(`fetchListReviews result ${JSON.stringify(result)}`);
+        return result;
     });
 }
 function fetchPullRequestReviewers({ pr }) {
@@ -35496,6 +35500,19 @@ function withDebugLog(executeFunction) {
         return result;
     };
 }
+function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
+    if (!configSageUsers) {
+        return [];
+    }
+    const loginsFromEmails = Object.keys(configSageUsers).reduce((logins, login) => {
+        const email = configSageUsers[login][0].email;
+        if (emailsList.includes(email)) {
+            logins.push(login);
+        }
+        return logins;
+    }, []);
+    return loginsFromEmails;
+}
 
 // EXTERNAL MODULE: ./node_modules/minimatch/minimatch.js
 var minimatch = __nccwpck_require__(3973);
@@ -35532,18 +35549,18 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     }
     return true;
 }
-function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, }) {
+function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const result = new Set();
+    const availableReviewers = reviewers.filter((reviewer) => {
+        if (reviewer === createdBy) {
+            return false;
+        }
+        return !absentReviewersLogins.includes(reviewer);
+    });
     if (!assign) {
-        reviewers.forEach((reviewer) => {
-            if (reviewer === createdBy) {
-                return;
-            }
-            return result.add(reviewer);
-        });
-        return result;
+        return availableReviewers;
     }
-    const preselectAlreadySelectedReviewers = reviewers.reduce((alreadySelectedReviewers, reviewer) => {
+    const preselectAlreadySelectedReviewers = availableReviewers.reduce((alreadySelectedReviewers, reviewer) => {
         const alreadyRequested = requestedReviewerLogins.includes(reviewer);
         if (alreadyRequested) {
             alreadySelectedReviewers.push(reviewer);
@@ -35552,7 +35569,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
     }, []);
     const selectedList = [...preselectAlreadySelectedReviewers];
     while (selectedList.length < assign) {
-        const reviewersWithoutRandomlySelected = reviewers.filter((reviewer) => {
+        const reviewersWithoutRandomlySelected = availableReviewers.filter((reviewer) => {
             return !selectedList.includes(reviewer);
         });
         const randomReviewer = getRandomItemFromArray(reviewersWithoutRandomlySelected);
@@ -35563,7 +35580,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
     });
     return result;
 }
-function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, requestedReviewerLogins, }) {
+function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const rulesByFileGroup = byFileGroups;
     const set = new Set();
     fileChangesGroups.forEach((fileGroup) => {
@@ -35577,13 +35594,14 @@ function identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, crea
                 reviewers: rule.reviewers,
                 requestedReviewerLogins,
                 createdBy,
+                absentReviewersLogins,
             });
             reviewers.forEach((reviewer) => set.add(reviewer));
         });
     });
     return [...set];
 }
-function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, }) {
+function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, absentReviewersLogins, }) {
     const rules = rulesByCreator[createdBy];
     if (!rules) {
         info(`No rules for creator ${createdBy} were found.`);
@@ -35594,6 +35612,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
                 fileChangesGroups,
                 createdBy,
                 requestedReviewerLogins,
+                absentReviewersLogins,
             });
         }
         else {
@@ -35617,6 +35636,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
             reviewers: rule.reviewers,
             createdBy,
             requestedReviewerLogins,
+            absentReviewersLogins,
         });
         reviewers.forEach((reviewer) => result.add(reviewer));
     });
@@ -35735,19 +35755,26 @@ var sage_awaiter = (undefined && undefined.__awaiter) || function (thisArg, _arg
 
 function getEmployeesWhoAreOutToday({ sageBaseUrl, sageToken, }) {
     return sage_awaiter(this, void 0, void 0, function* () {
-        const client = sageClient({
-            sageBaseUrl,
-            sageToken,
-        });
-        const date = new Date().toISOString().split('T')[0];
-        const result = [];
-        const sageResponse = yield client(`leave-management/out-of-office-today?date=${date}`, 'GET');
-        if (sageResponse !== undefined && sageResponse.data.length > 0) {
-            sageResponse.data.forEach((response) => {
-                result.push(response.employee.email);
+        try {
+            const client = sageClient({
+                sageBaseUrl,
+                sageToken,
             });
+            const date = new Date().toISOString().split('T')[0];
+            const result = [];
+            const sageResponse = yield client(`leave-management/out-of-office-today?date=${date}`, 'GET');
+            if (sageResponse !== undefined && sageResponse.data.length > 0) {
+                sageResponse.data.forEach((response) => {
+                    result.push(response.employee.email);
+                });
+            }
+            info(`Employees reviewers who don't work today: ${result.join(', ')}`);
+            return result;
         }
-        return result;
+        catch (err) {
+            logger_warning('Sage Error: ' + JSON.stringify(err, null, 2));
+            return [];
+        }
     });
 }
 function sageClient({ sageBaseUrl, sageToken, }) {
@@ -35789,6 +35816,7 @@ var auto_assign_awaiter = (undefined && undefined.__awaiter) || function (thisAr
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+
 
 
 
@@ -35847,37 +35875,25 @@ function run() {
             });
             info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
             info(`Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(requestedReviewerLogins)}`);
-            const reviewers = reviewer_identifyReviewers({
+            const absentEmployeesEmails = inputs.checkReviewerOnSage
+                ? yield sage_getEmployeesWhoAreOutToday({
+                    sageBaseUrl: inputs.sageUrl,
+                    sageToken: inputs.sageToken,
+                })
+                : [];
+            const absentReviewersLogins = convertSageEmailsToUsernames({
+                configSageUsers: config.sageUsers,
+                emailsList: absentEmployeesEmails,
+            });
+            const reviewersToAssign = reviewer_identifyReviewers({
                 createdBy: author,
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins: requestedReviewerLogins,
+                requestedReviewerLogins,
+                absentReviewersLogins,
             });
-            info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
-            const sageUsers = config.sageUsers || {};
-            let employeesWhoAreOutToday = [];
-            if (inputs.checkReviewerOnSage) {
-                try {
-                    employeesWhoAreOutToday = yield sage_getEmployeesWhoAreOutToday({
-                        sageBaseUrl: inputs.sageUrl,
-                        sageToken: inputs.sageToken,
-                    });
-                    info(`Employees reviewers who don't work today: ${employeesWhoAreOutToday.join(', ')}`);
-                }
-                catch (err) {
-                    logger_warning('Sage Error: ' + JSON.stringify(err, null, 2));
-                }
-            }
-            const reviewersToAssign = reviewers.filter((reviewer) => {
-                if (reviewer === author) {
-                    return false;
-                }
-                if (sageUsers[reviewer]) {
-                    return !employeesWhoAreOutToday.includes(sageUsers[reviewer][0].email);
-                }
-                return true;
-            });
+            info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);
             if (reviewersToAssign.length === 0) {
                 info(`No reviewers were matched for author ${author}. Terminating the process`);
                 return;

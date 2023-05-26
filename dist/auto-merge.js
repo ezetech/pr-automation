@@ -35155,7 +35155,9 @@ function fetchListRequestedReviewers({ pr, }) {
             pull_number: pr.number,
         });
         logger_debug(`fetchListRequestedReviewers response ${JSON.stringify(response)}`);
-        return response.data.users.map((item) => item.login);
+        const result = response.data.users.map((item) => item.login);
+        logger_debug(`fetchListRequestedReviewers result ${JSON.stringify(result)}`);
+        return result;
     });
 }
 function fetchListReviews({ pr }) {
@@ -35176,7 +35178,9 @@ function fetchListReviews({ pr }) {
             }
             return result;
         }, {});
-        return Object.values(obj);
+        const result = Object.values(obj);
+        logger_debug(`fetchListReviews result ${JSON.stringify(result)}`);
+        return result;
     });
 }
 function fetchPullRequestReviewers({ pr }) {
@@ -35496,6 +35500,19 @@ function withDebugLog(executeFunction) {
         return result;
     };
 }
+function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
+    if (!configSageUsers) {
+        return [];
+    }
+    const loginsFromEmails = Object.keys(configSageUsers).reduce((logins, login) => {
+        const email = configSageUsers[login][0].email;
+        if (emailsList.includes(email)) {
+            logins.push(login);
+        }
+        return logins;
+    }, []);
+    return loginsFromEmails;
+}
 
 ;// CONCATENATED MODULE: ./src/approves/is-pr-fully-approved.ts
 
@@ -35729,18 +35746,18 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     }
     return true;
 }
-function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, }) {
+function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const result = new Set();
+    const availableReviewers = reviewers.filter((reviewer) => {
+        if (reviewer === createdBy) {
+            return false;
+        }
+        return !absentReviewersLogins.includes(reviewer);
+    });
     if (!assign) {
-        reviewers.forEach((reviewer) => {
-            if (reviewer === createdBy) {
-                return;
-            }
-            return result.add(reviewer);
-        });
-        return result;
+        return availableReviewers;
     }
-    const preselectAlreadySelectedReviewers = reviewers.reduce((alreadySelectedReviewers, reviewer) => {
+    const preselectAlreadySelectedReviewers = availableReviewers.reduce((alreadySelectedReviewers, reviewer) => {
         const alreadyRequested = requestedReviewerLogins.includes(reviewer);
         if (alreadyRequested) {
             alreadySelectedReviewers.push(reviewer);
@@ -35749,7 +35766,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
     }, []);
     const selectedList = [...preselectAlreadySelectedReviewers];
     while (selectedList.length < assign) {
-        const reviewersWithoutRandomlySelected = reviewers.filter((reviewer) => {
+        const reviewersWithoutRandomlySelected = availableReviewers.filter((reviewer) => {
             return !selectedList.includes(reviewer);
         });
         const randomReviewer = getRandomItemFromArray(reviewersWithoutRandomlySelected);
@@ -35760,7 +35777,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
     });
     return result;
 }
-function reviewer_identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, requestedReviewerLogins, }) {
+function reviewer_identifyReviewersByDefaultRules({ byFileGroups, fileChangesGroups, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const rulesByFileGroup = byFileGroups;
     const set = new Set();
     fileChangesGroups.forEach((fileGroup) => {
@@ -35774,13 +35791,14 @@ function reviewer_identifyReviewersByDefaultRules({ byFileGroups, fileChangesGro
                 reviewers: rule.reviewers,
                 requestedReviewerLogins,
                 createdBy,
+                absentReviewersLogins,
             });
             reviewers.forEach((reviewer) => set.add(reviewer));
         });
     });
     return [...set];
 }
-function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, }) {
+function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defaultRules, requestedReviewerLogins, absentReviewersLogins, }) {
     const rules = rulesByCreator[createdBy];
     if (!rules) {
         info(`No rules for creator ${createdBy} were found.`);
@@ -35791,6 +35809,7 @@ function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGrou
                 fileChangesGroups,
                 createdBy,
                 requestedReviewerLogins,
+                absentReviewersLogins,
             });
         }
         else {
@@ -35814,6 +35833,7 @@ function reviewer_identifyReviewers({ createdBy, rulesByCreator, fileChangesGrou
             reviewers: rule.reviewers,
             createdBy,
             requestedReviewerLogins,
+            absentReviewersLogins,
         });
         reviewers.forEach((reviewer) => result.add(reviewer));
     });

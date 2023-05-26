@@ -52,21 +52,23 @@ function getReviewersBasedOnRule({
   reviewers,
   createdBy,
   requestedReviewerLogins,
+  absentReviewersLogins,
 }: Pick<Rule, 'assign' | 'reviewers'> & {
   createdBy: string;
   requestedReviewerLogins: string[];
+  absentReviewersLogins: string[];
 }) {
   const result = new Set<string>();
+  const availableReviewers = reviewers.filter((reviewer) => {
+    if (reviewer === createdBy) {
+      return false;
+    }
+    return !absentReviewersLogins.includes(reviewer);
+  });
   if (!assign) {
-    reviewers.forEach((reviewer) => {
-      if (reviewer === createdBy) {
-        return;
-      }
-      return result.add(reviewer);
-    });
-    return result;
+    return availableReviewers;
   }
-  const preselectAlreadySelectedReviewers = reviewers.reduce<string[]>(
+  const preselectAlreadySelectedReviewers = availableReviewers.reduce<string[]>(
     (alreadySelectedReviewers, reviewer) => {
       const alreadyRequested = requestedReviewerLogins.includes(reviewer);
       if (alreadyRequested) {
@@ -78,7 +80,7 @@ function getReviewersBasedOnRule({
   );
   const selectedList = [...preselectAlreadySelectedReviewers];
   while (selectedList.length < assign) {
-    const reviewersWithoutRandomlySelected = reviewers.filter((reviewer) => {
+    const reviewersWithoutRandomlySelected = availableReviewers.filter((reviewer) => {
       return !selectedList.includes(reviewer);
     });
     const randomReviewer = getRandomItemFromArray(reviewersWithoutRandomlySelected);
@@ -95,11 +97,13 @@ function identifyReviewersByDefaultRules({
   fileChangesGroups,
   createdBy,
   requestedReviewerLogins,
+  absentReviewersLogins,
 }: {
   byFileGroups: DefaultRules['byFileGroups'];
   fileChangesGroups: string[];
   requestedReviewerLogins: string[];
   createdBy: string;
+  absentReviewersLogins: string[];
 }): string[] {
   const rulesByFileGroup = byFileGroups;
   const set = new Set<string>();
@@ -114,6 +118,7 @@ function identifyReviewersByDefaultRules({
         reviewers: rule.reviewers,
         requestedReviewerLogins,
         createdBy,
+        absentReviewersLogins,
       });
       reviewers.forEach((reviewer) => set.add(reviewer));
     });
@@ -127,12 +132,14 @@ export function identifyReviewers({
   fileChangesGroups,
   defaultRules,
   requestedReviewerLogins,
+  absentReviewersLogins,
 }: {
   createdBy: string;
   rulesByCreator: Config['rulesByCreator'];
   defaultRules?: Config['defaultRules'];
   fileChangesGroups: string[];
   requestedReviewerLogins: string[];
+  absentReviewersLogins: string[];
 }): string[] {
   const rules = rulesByCreator[createdBy];
   if (!rules) {
@@ -144,6 +151,7 @@ export function identifyReviewers({
         fileChangesGroups,
         createdBy,
         requestedReviewerLogins,
+        absentReviewersLogins,
       });
     } else {
       return [];
@@ -171,6 +179,7 @@ export function identifyReviewers({
       reviewers: rule.reviewers,
       createdBy,
       requestedReviewerLogins,
+      absentReviewersLogins,
     });
     reviewers.forEach((reviewer) => result.add(reviewer));
   });

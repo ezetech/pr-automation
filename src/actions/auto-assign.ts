@@ -10,6 +10,7 @@ import {
 
 import { getEmployeesWhoAreOutToday } from '../sage';
 import { CommitData } from '../github';
+import { convertSageEmailsToUsernames } from '../utils';
 
 export async function run(): Promise<void> {
   try {
@@ -80,46 +81,27 @@ export async function run(): Promise<void> {
       )}`,
     );
 
-    const reviewers = identifyReviewers({
+    const absentEmployeesEmails: string[] = inputs.checkReviewerOnSage
+      ? await getEmployeesWhoAreOutToday({
+          sageBaseUrl: inputs.sageUrl,
+          sageToken: inputs.sageToken,
+        })
+      : [];
+
+    const absentReviewersLogins = convertSageEmailsToUsernames({
+      configSageUsers: config.sageUsers,
+      emailsList: absentEmployeesEmails,
+    });
+
+    const reviewersToAssign = identifyReviewers({
       createdBy: author,
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins: requestedReviewerLogins,
+      requestedReviewerLogins,
+      absentReviewersLogins,
     });
-    info(`Author: ${author}. Identified reviewers: ${reviewers.join(', ')}`);
-
-    const sageUsers = config.sageUsers || {};
-    let employeesWhoAreOutToday: string[] = [];
-
-    if (inputs.checkReviewerOnSage) {
-      try {
-        employeesWhoAreOutToday = await getEmployeesWhoAreOutToday({
-          sageBaseUrl: inputs.sageUrl,
-          sageToken: inputs.sageToken,
-        });
-
-        info(
-          `Employees reviewers who don't work today: ${employeesWhoAreOutToday.join(
-            ', ',
-          )}`,
-        );
-      } catch (err) {
-        warning('Sage Error: ' + JSON.stringify(err, null, 2));
-      }
-    }
-
-    const reviewersToAssign = reviewers.filter((reviewer) => {
-      if (reviewer === author) {
-        return false;
-      }
-
-      if (sageUsers[reviewer]) {
-        return !employeesWhoAreOutToday.includes(sageUsers[reviewer][0].email);
-      }
-
-      return true;
-    });
+    info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);
 
     if (reviewersToAssign.length === 0) {
       info(`No reviewers were matched for author ${author}. Terminating the process`);
