@@ -388,7 +388,7 @@ describe('Should test identifyReviewers: ', () => {
     const times = 1000;
     for (let i = 0; i < times; i++) {
       const result = identifyReviewers({
-        requestedReviewerLogins: ['Robin', 'Arthur'],
+        requestedReviewerLogins: ['Robin'],
         createdBy: 'Bob',
         rulesByCreator: {
           Bob: [{ reviewers: ['Robin', 'Arthur'], required: 1 }],

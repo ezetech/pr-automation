@@ -72,7 +72,11 @@ async function fetchListRequestedReviewers({
     pull_number: pr.number,
   });
   debug(`fetchListRequestedReviewers response ${JSON.stringify(response)}`);
-  return response.data.users.map((item: { login: string }) => item.login);
+  const result = response.data.users.map((item: { login: string }) => item.login);
+
+  debug(`fetchListRequestedReviewers result ${JSON.stringify(result)}`);
+
+  return result;
 }
 
 export async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> {
@@ -91,7 +95,11 @@ export async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<str
     }
     return result;
   }, {});
-  return Object.values(obj);
+  const result = Object.values(obj);
+
+  debug(`fetchListReviews result ${JSON.stringify(result)}`);
+
+  return result;
 }
 
 export async function fetchPullRequestReviewers({ pr }: { pr: PullRequest }) {
