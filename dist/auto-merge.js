@@ -35155,7 +35155,9 @@ function fetchListRequestedReviewers({ pr, }) {
             pull_number: pr.number,
         });
         logger_debug(`fetchListRequestedReviewers response ${JSON.stringify(response)}`);
-        return response.data.users.map((item) => item.login);
+        const result = response.data.users.map((item) => item.login);
+        logger_debug(`fetchListRequestedReviewers result ${JSON.stringify(result)}`);
+        return result;
     });
 }
 function fetchListReviews({ pr }) {
@@ -35176,7 +35178,9 @@ function fetchListReviews({ pr }) {
             }
             return result;
         }, {});
-        return Object.values(obj);
+        const result = Object.values(obj);
+        logger_debug(`fetchListReviews result ${JSON.stringify(result)}`);
+        return result;
     });
 }
 function fetchPullRequestReviewers({ pr }) {
