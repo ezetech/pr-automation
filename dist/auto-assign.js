@@ -35558,7 +35558,7 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
         return !absentReviewersLogins.includes(reviewer);
     });
     if (!assign) {
-        return availableReviewers;
+        return new Set(availableReviewers);
     }
     const preselectAlreadySelectedReviewers = availableReviewers.reduce((alreadySelectedReviewers, reviewer) => {
         const alreadyRequested = requestedReviewerLogins.includes(reviewer);
@@ -35568,12 +35568,15 @@ function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReview
         return alreadySelectedReviewers;
     }, []);
     const selectedList = [...preselectAlreadySelectedReviewers];
-    while (selectedList.length < assign) {
+    const maxAmountToAddReviewers = availableReviewers.length >= assign ? assign : availableReviewers.length;
+    while (selectedList.length < maxAmountToAddReviewers) {
         const reviewersWithoutRandomlySelected = availableReviewers.filter((reviewer) => {
             return !selectedList.includes(reviewer);
         });
         const randomReviewer = getRandomItemFromArray(reviewersWithoutRandomlySelected);
-        selectedList.push(randomReviewer);
+        if (randomReviewer) {
+            selectedList.push(randomReviewer);
+        }
     }
     selectedList.forEach((randomlySelected) => {
         result.add(randomlySelected);

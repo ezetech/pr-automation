@@ -340,6 +340,27 @@ describe('Should test identifyReviewers: ', () => {
     expect(result.length).to.be.equal(6);
     done();
   });
+  it('Should assign proper reviewers for Alfred (2) when some group is completely absent. file-group-common changed', (done) => {
+    const result = identifyReviewers({
+      createdBy: 'Alfred',
+      fileChangesGroups: ['file-group-common'],
+      rulesByCreator: {
+        Alfred: [
+          { reviewers: ['Mike', 'Bob'], required: 1, assign: 1 },
+          { reviewers: ['Denis', 'Michaela', 'Vac'], required: 1, assign: 1 },
+          { reviewers: ['Raid', 'Hank'], required: 1, assign: 1 },
+          { reviewers: ['Vinny'], required: 1, assign: 1 },
+        ],
+      },
+      requestedReviewerLogins: ['Michaela', 'Raid'],
+      absentReviewersLogins: ['Vac', 'Mike', 'Bob'],
+    });
+    expect(result).to.include('Michaela', 'Michaela is required');
+    expect(result).to.include('Raid', 'Raid is required');
+    expect(result).to.include('Vinny', 'Vinny is required');
+    expect(result.length).to.be.equal(3);
+    done();
+  });
   it('Should assign proper reviewers for Alfred. file-group-1 changed', (done) => {
     const result = identifyReviewers({
       requestedReviewerLogins: [],
