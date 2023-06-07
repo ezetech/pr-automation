@@ -1,7 +1,7 @@
 import { Config } from './config/typings';
 import { debug } from './logger';
 
-export function getRandomItemFromArray<T>(items: T[]): T {
+export function getRandomItemFromArray<T>(items: T[]): T | undefined {
   return items[Math.floor(Math.random() * items.length)];
 }
 

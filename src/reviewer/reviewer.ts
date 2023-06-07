@@ -57,7 +57,7 @@ function getReviewersBasedOnRule({
   createdBy: string;
   requestedReviewerLogins: string[];
   absentReviewersLogins: string[];
-}) {
+}): Set<string> {
   const result = new Set<string>();
   const availableReviewers = reviewers.filter((reviewer) => {
     if (reviewer === createdBy) {
@@ -66,7 +66,7 @@ function getReviewersBasedOnRule({
     return !absentReviewersLogins.includes(reviewer);
   });
   if (!assign) {
-    return availableReviewers;
+    return new Set(availableReviewers);
   }
   const preselectAlreadySelectedReviewers = availableReviewers.reduce<string[]>(
     (alreadySelectedReviewers, reviewer) => {
@@ -79,12 +79,18 @@ function getReviewersBasedOnRule({
     [],
   );
   const selectedList = [...preselectAlreadySelectedReviewers];
-  while (selectedList.length < assign) {
+
+  const maxAmountToAddReviewers =
+    availableReviewers.length >= assign ? assign : availableReviewers.length;
+
+  while (selectedList.length < maxAmountToAddReviewers) {
     const reviewersWithoutRandomlySelected = availableReviewers.filter((reviewer) => {
       return !selectedList.includes(reviewer);
     });
     const randomReviewer = getRandomItemFromArray(reviewersWithoutRandomlySelected);
-    selectedList.push(randomReviewer);
+    if (randomReviewer) {
+      selectedList.push(randomReviewer);
+    }
   }
   selectedList.forEach((randomlySelected) => {
     result.add(randomlySelected);
