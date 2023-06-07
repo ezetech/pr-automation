@@ -5,6 +5,7 @@
     "jsx": "react",
     "moduleResolution": "node",
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "strict": true
   }
 }
