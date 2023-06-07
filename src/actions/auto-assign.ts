@@ -1,4 +1,5 @@
 import { getInput } from '@actions/core';
+import { version } from '../../package.json';
 import { info, error, warning, debug } from '../logger';
 import * as github from '../github';
 import {
@@ -14,7 +15,7 @@ import { convertSageEmailsToUsernames } from '../utils';
 
 export async function run(): Promise<void> {
   try {
-    info('Starting pr auto assign.');
+    info(`Starting pr auto assign version ${version}`);
 
     const inputs = {
       checkReviewerOnSage:

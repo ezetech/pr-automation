@@ -1,4 +1,5 @@
 import * as core from '@actions/core';
+import { version } from '../../package.json';
 import * as github from '../github';
 import { info, error, warning, debug } from '../logger';
 import { isPrFullyApproved, identifyReviewers } from '../approves';
@@ -7,7 +8,7 @@ import { changeJiraIssueStatus } from '../jira';
 
 export async function run(): Promise<void> {
   try {
-    info('Staring PR auto merging.');
+    info(`Staring PR auto merge version ${version}.`);
 
     const inputs = github.getInputs();
 

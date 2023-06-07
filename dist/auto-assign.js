@@ -35023,6 +35023,8 @@ __nccwpck_require__.d(__webpack_exports__, {
 
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
+;// CONCATENATED MODULE: ./package.json
+const package_namespaceObject = {"i8":"0.5.2"};
 ;// CONCATENATED MODULE: ./src/logger.ts
 
 const isTest = process.env.NODE_ENV === 'test';
@@ -35825,11 +35827,12 @@ var auto_assign_awaiter = (undefined && undefined.__awaiter) || function (thisAr
 
 
 
+
 function run() {
     var _a, _b, _c;
     return auto_assign_awaiter(this, void 0, void 0, function* () {
         try {
-            info('Starting pr auto assign.');
+            info(`Starting pr auto assign version ${package_namespaceObject.i8}`);
             const inputs = {
                 checkReviewerOnSage: (0,core.getInput)('check-reviewer-on-sage', { required: false }) === 'true',
                 sageUrl: (0,core.getInput)('sage-url', { required: false }),
