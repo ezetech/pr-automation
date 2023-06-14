@@ -79,6 +79,19 @@ async function fetchListRequestedReviewers({
   return result;
 }
 
+function getUsersFromListReviewsResponse(response: any): Record<string, string>[] {
+  try {
+    let users: Record<string, unknown>[] = response?.data?.users;
+    if (!users) {
+      const arr = response?.data;
+      return arr.map((item: { user: Record<string, string> }) => item.user);
+    }
+    return [];
+  } catch (e) {
+    return [];
+  }
+}
+
 export async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> {
   const octokit = getMyOctokit();
   const response = await octokit.rest.pulls.listReviews({
@@ -87,8 +100,8 @@ export async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<str
     pull_number: pr.number,
   });
   debug(`fetchListReviews response ${JSON.stringify(response)}`);
-  const arr: Record<string, unknown>[] = response?.data?.users || [];
-  const obj = arr.reduce<Record<string, string>>((result, item) => {
+  const users = getUsersFromListReviewsResponse(response);
+  const obj = users.reduce<Record<string, string>>((result, item) => {
     const login = item?.login as string;
     if (login) {
       result[login] = login;

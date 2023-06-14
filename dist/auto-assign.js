@@ -35162,8 +35162,21 @@ function fetchListRequestedReviewers({ pr, }) {
         return result;
     });
 }
-function fetchListReviews({ pr }) {
+function getUsersFromListReviewsResponse(response) {
     var _a;
+    try {
+        let users = (_a = response === null || response === void 0 ? void 0 : response.data) === null || _a === void 0 ? void 0 : _a.users;
+        if (!users) {
+            const arr = response === null || response === void 0 ? void 0 : response.data;
+            return arr.map((item) => item.user);
+        }
+        return [];
+    }
+    catch (e) {
+        return [];
+    }
+}
+function fetchListReviews({ pr }) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = getMyOctokit();
         const response = yield octokit.rest.pulls.listReviews({
@@ -35172,8 +35185,8 @@ function fetchListReviews({ pr }) {
             pull_number: pr.number,
         });
         debug(`fetchListReviews response ${JSON.stringify(response)}`);
-        const arr = ((_a = response === null || response === void 0 ? void 0 : response.data) === null || _a === void 0 ? void 0 : _a.users) || [];
-        const obj = arr.reduce((result, item) => {
+        const users = getUsersFromListReviewsResponse(response);
+        const obj = users.reduce((result, item) => {
             const login = item === null || item === void 0 ? void 0 : item.login;
             if (login) {
                 result[login] = login;
