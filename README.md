@@ -312,14 +312,14 @@ This Github Action can change Jira Issue after successfully merging PR.
 
 ## Inputs
 
-| Name                               | Required | Description                                                                                                         |
-| ---------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------|
-| `should-change-jira-issue-status`  | yes      | Default it's `false`                                                                                                |
-| `jira-token`                       | yes      | See <a href='https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/' target="_blank">this link</a> to get more detail on how to generate token |
-| `jira-account`                     | yes      | See <a href='https://developer.atlassian.com/cloud/jira/platform/basic-auth-for-rest-apis/' target="_blank">Using Jira API with Basic header scheme</a> |
-| `jira-endpoint`                    | yes      | See <a href='https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/#version' target="_blank">Jira Rest API docs</a> |
-| `jira-move-issue-from`             | yes      | If the status does not found or the issue does not have this status, do nothing.                                    |
-| `jira-move-issue-to`               | yes      | If the status does not found, do nothing.                                                                           |
+| Name                              | Required | Description                                                                                                                                                                                |
+|-----------------------------------| -------- |--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `should-change-jira-issue-status` | yes      | Default it's `false`                                                                                                                                                                       |
+| `jira-token`                      | yes      | See <a href='https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/' target="_blank">this link</a> to get more detail on how to generate token |
+| `jira-account`                    | yes      | See <a href='https://developer.atlassian.com/cloud/jira/platform/basic-auth-for-rest-apis/' target="_blank">Using Jira API with Basic header scheme</a>                                    |
+| `jira-endpoint`                   | yes      | See <a href='https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/#version' target="_blank">Jira Rest API docs</a>                                                            |
+| `jira-move-issue-from`            | yes      | If the status does not found or the issue does not have this status, do nothing.                                                                                                           |
+| `jira-move-transition-name`       | yes      | Transition name in jira. <a href='https://support.atlassian.com/jira-software-cloud/docs/transition-an-issue/' target="_blank">Transition an issue</a>                                     | 
 
 ### Example of workflow file
 

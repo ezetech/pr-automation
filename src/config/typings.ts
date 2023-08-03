@@ -112,7 +112,7 @@ export interface Inputs {
   jiraAccount: string;
   jiraEndpoint: string;
   jiraMoveIssueFrom: string;
-  jiraMoveIssueTo: string;
+  jiraMoveTransitionName: string;
 }
 
 export interface Reviewer {
