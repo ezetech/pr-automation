@@ -163,7 +163,7 @@ export function getInputs(): Inputs {
     jiraAccount: getInput('jira-account', { required: false }),
     jiraEndpoint: getInput('jira-endpoint', { required: false }),
     jiraMoveIssueFrom: getInput('jira-move-issue-from', { required: false }),
-    jiraMoveIssueTo: getInput('jira-move-issue-to', { required: false }),
+    jiraMoveTransitionName: getInput('jira-move-transition-name', { required: false }),
   };
 }
 

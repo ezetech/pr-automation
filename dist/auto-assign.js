@@ -35241,7 +35241,7 @@ function getInputs() {
         jiraAccount: (0,core.getInput)('jira-account', { required: false }),
         jiraEndpoint: (0,core.getInput)('jira-endpoint', { required: false }),
         jiraMoveIssueFrom: (0,core.getInput)('jira-move-issue-from', { required: false }),
-        jiraMoveIssueTo: (0,core.getInput)('jira-move-issue-to', { required: false }),
+        jiraMoveTransitionName: (0,core.getInput)('jira-move-transition-name', { required: false }),
     };
 }
 function fetchConfig() {

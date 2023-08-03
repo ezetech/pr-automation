@@ -63,7 +63,7 @@ export async function changeJiraIssueStatus({
 
   const transitionId = getTransitionId({
     transitions: availableTransitions.transitions,
-    transitionName: inputs.jiraMoveIssueTo,
+    transitionName: inputs.jiraMoveTransitionName,
   });
 
   if (!transitionId) {
