@@ -55,7 +55,7 @@ export async function run(): Promise<void> {
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins: requestedReviewerLogins,
+      requestedReviewerLogins,
     });
 
     const checks = await github.getCIChecks();
@@ -67,6 +67,7 @@ export async function run(): Promise<void> {
       requiredChecks: config?.options?.requiredChecks,
       reviews,
       checks,
+      requestedReviewerLogins,
     });
 
     if (isPrFullyApprovedResponse !== true) {

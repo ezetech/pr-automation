@@ -6,6 +6,7 @@ type Params = {
   requiredChecks: string[] | undefined;
   checks: Checks;
   reviews: Reviews;
+  requestedReviewerLogins: string[];
 };
 
 export function isPrFullyApproved({
@@ -13,6 +14,7 @@ export function isPrFullyApproved({
   requiredChecks,
   checks,
   reviews,
+  requestedReviewerLogins,
 }: Params): boolean | string {
   const checkCIChecks = areCIChecksPassed({ checks, requiredChecks });
 
@@ -20,7 +22,7 @@ export function isPrFullyApproved({
     return checkCIChecks;
   }
 
-  const checkReviewers = checkReviewersRequiredChanges({ reviews, rules });
+  const checkReviewers = checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins });
 
   if (checkReviewers !== true) {
     return checkReviewers;

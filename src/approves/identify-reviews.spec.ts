@@ -162,9 +162,13 @@ describe('should test filterReviewersByState: ', () => {
 
 describe('should test checkReviewersRequiredChanges: ', () => {
   it('should return error message if there is no reviews', () => {
-    expect(checkReviewersRequiredChanges({ reviews: [], rules: [] })).to.equal(
-      'Waiting for reviews.',
-    );
+    expect(
+      checkReviewersRequiredChanges({
+        reviews: [],
+        rules: [],
+        requestedReviewerLogins: [],
+      }),
+    ).to.equal('Waiting for reviews.');
   });
 
   it('should return error message if reviewer required changes', () => {
@@ -176,6 +180,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test3'],
       reviews,
       rules: [
         {
@@ -188,6 +193,25 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     expect(result).to.equal('test2 required changes.');
   });
 
+  it('should return error message if none of reviewers were assigned', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExampleData('test4', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test4'],
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2', 'test3'],
+          required: 1,
+        },
+      ],
+    });
+
+    expect(result).to.equal('It appears that there are no rules for this PR based on what users that were assigned');
+  });
+
   it('should return error message if reviewers required changes', () => {
     const reviews = getReviewersLastReviews([
       generateReviewsExampleData('test1', 'CHANGES_REQUESTED'),
@@ -196,6 +220,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test1'],
       reviews,
       rules: [
         {
@@ -214,6 +239,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test1'],
       reviews,
       rules: [
         {
@@ -233,6 +259,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test1', 'test2'],
       reviews,
       rules: [
         {
@@ -251,6 +278,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test1', 'test2'],
       reviews,
       rules: [
         {
@@ -261,5 +289,53 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     });
 
     expect(result).to.equal('Waiting 2 approve(s) from test1, test2, test3 to approve.');
+  });
+
+  it('should return true when some approver groups are out', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test2', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test1', 'test2'],
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2'],
+          required: 1,
+        },
+        {
+          reviewers: ['test4', 'test5'],
+          required: 1,
+        },
+      ],
+    });
+
+    expect(result).to.equal(true);
+  });
+
+  it('should return error when some approver groups are partially out', () => {
+    const reviews = getReviewersLastReviews([
+      generateReviewsExampleData('test1', 'APPROVED'),
+      generateReviewsExampleData('test2', 'APPROVED'),
+    ]);
+
+    const result = checkReviewersRequiredChanges({
+      requestedReviewerLogins: ['test1', 'test2', 'test4'],
+      reviews,
+      rules: [
+        {
+          reviewers: ['test1', 'test2'],
+          required: 1,
+        },
+        {
+          reviewers: ['test4', 'test5'],
+          required: 1,
+        },
+      ],
+    });
+
+    expect(result).to.equal('Waiting 1 approve(s) from test4, test5 to approve.');
   });
 });

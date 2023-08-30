@@ -35531,16 +35531,27 @@ function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
 
 ;// CONCATENATED MODULE: ./src/approves/is-pr-fully-approved.ts
 
-function isPrFullyApproved({ rules, requiredChecks, checks, reviews, }) {
+function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedReviewerLogins, }) {
     const checkCIChecks = approves_areCIChecksPassed({ checks, requiredChecks });
     if (checkCIChecks !== true) {
         return checkCIChecks;
     }
-    const checkReviewers = approves_checkReviewersRequiredChanges({ reviews, rules });
+    const checkReviewers = approves_checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins });
     if (checkReviewers !== true) {
         return checkReviewers;
     }
     return true;
+}
+
+;// CONCATENATED MODULE: ./src/approves/get-rules-that-have-at-least-one-approver.ts
+function getRulesThatHaveAtLeastOneApprover({ rules, requestedReviewerLogins, }) {
+    return rules.reduce((result, rule) => {
+        const someApproverFromRuleAssigned = rule.reviewers.some((reviewerFromRule) => requestedReviewerLogins.includes(reviewerFromRule));
+        if (someApproverFromRuleAssigned) {
+            result.push(rule);
+        }
+        return result;
+    }, []);
 }
 
 ;// CONCATENATED MODULE: ./src/approves/identify-approvers.ts
@@ -35639,6 +35650,7 @@ function areCIChecksPassed({ checks, requiredChecks, }) {
 }
 
 ;// CONCATENATED MODULE: ./src/approves/identify-reviews.ts
+
 function getReviewersLastReviews(listReviews) {
     const response = {};
     listReviews
@@ -35685,14 +35697,15 @@ function filterReviewersByState(reviewersFullData) {
     return response;
 }
 /**
+ * skipRuleThatHaveNoAssignedReviewers.
+ * will skip rule groups that are not assigned completely for some reason.
+ * It happens when reviewers from some group were not assigned in case of being our of office.
+ * making it true by default for every case. might consider making it as param.
+ *
  * Check if all required reviewers approved the PR
- *
- * @param reviews
- * @param rules
- *
  * @returns true if all required reviewers approved the PR, otherwise return a string with the error message
  */
-function checkReviewersRequiredChanges({ reviews, rules, }) {
+function checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins, skipRuleThatHaveNoAssignedReviewers = true, }) {
     if (!reviews.length) {
         return 'Waiting for reviews.';
     }
@@ -35700,7 +35713,13 @@ function checkReviewersRequiredChanges({ reviews, rules, }) {
     if (reviewersByState.requiredChanges.length) {
         return `${reviewersByState.requiredChanges.join(', ')} required changes.`;
     }
-    for (const role of rules) {
+    const rulesToMatch = skipRuleThatHaveNoAssignedReviewers
+        ? approves_getRulesThatHaveAtLeastOneApprover({ rules, requestedReviewerLogins })
+        : rules;
+    if (rulesToMatch.length === 0) {
+        return 'It appears that there are no rules for this PR based on what users that were assigned';
+    }
+    for (const role of rulesToMatch) {
         if (role.required) {
             const requiredReviewers = role.reviewers.filter((reviewer) => {
                 return reviewersByState.approve.includes(reviewer);
@@ -35719,12 +35738,14 @@ function checkReviewersRequiredChanges({ reviews, rules, }) {
 
 
 
+
 const approves_identifyReviewers = withDebugLog(identifyReviewers);
 const approves_isPrFullyApproved = withDebugLog(isPrFullyApproved);
 const approves_areCIChecksPassed = withDebugLog(areCIChecksPassed);
 const approves_checkReviewersRequiredChanges = withDebugLog(checkReviewersRequiredChanges);
 const approves_getReviewersLastReviews = withDebugLog(getReviewersLastReviews);
 const approves_filterReviewersByState = withDebugLog(filterReviewersByState);
+const approves_getRulesThatHaveAtLeastOneApprover = withDebugLog(getRulesThatHaveAtLeastOneApprover);
 
 // EXTERNAL MODULE: ./node_modules/minimatch/minimatch.js
 var minimatch = __nccwpck_require__(3973);
@@ -36141,7 +36162,7 @@ function run() {
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins: requestedReviewerLogins,
+                requestedReviewerLogins,
             });
             const checks = yield getCIChecks();
             const reviews = yield getReviews();
@@ -36150,6 +36171,7 @@ function run() {
                 requiredChecks: (_a = config === null || config === void 0 ? void 0 : config.options) === null || _a === void 0 ? void 0 : _a.requiredChecks,
                 reviews,
                 checks,
+                requestedReviewerLogins,
             });
             if (isPrFullyApprovedResponse !== true) {
                 info(isPrFullyApprovedResponse || 'PR is not fully approved');
