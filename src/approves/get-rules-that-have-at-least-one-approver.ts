@@ -1,4 +1,4 @@
-import { Reviews, Rule } from '../config/typings';
+import { Rule } from '../config/typings';
 
 export function getRulesThatHaveAtLeastOneApprover({
   rules,

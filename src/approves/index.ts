@@ -17,4 +17,6 @@ export const checkReviewersRequiredChanges = withDebugLog(
 );
 export const getReviewersLastReviews = withDebugLog(getReviewersLastReviewsFunc);
 export const filterReviewersByState = withDebugLog(filterReviewersByStateFunc);
-export const getRulesThatHaveAtLeastOneApprover = withDebugLog(getRulesThatHaveAtLeastOneApproverFunc);
+export const getRulesThatHaveAtLeastOneApprover = withDebugLog(
+  getRulesThatHaveAtLeastOneApproverFunc,
+);

@@ -35536,7 +35536,11 @@ function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedRe
     if (checkCIChecks !== true) {
         return checkCIChecks;
     }
-    const checkReviewers = approves_checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins });
+    const checkReviewers = approves_checkReviewersRequiredChanges({
+        reviews,
+        rules,
+        requestedReviewerLogins,
+    });
     if (checkReviewers !== true) {
         return checkReviewers;
     }

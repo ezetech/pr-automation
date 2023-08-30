@@ -209,7 +209,9 @@ describe('should test checkReviewersRequiredChanges: ', () => {
       ],
     });
 
-    expect(result).to.equal('It appears that there are no rules for this PR based on what users that were assigned');
+    expect(result).to.equal(
+      'It appears that there are no rules for this PR based on what users that were assigned',
+    );
   });
 
   it('should return error message if reviewers required changes', () => {

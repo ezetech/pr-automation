@@ -22,7 +22,11 @@ export function isPrFullyApproved({
     return checkCIChecks;
   }
 
-  const checkReviewers = checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins });
+  const checkReviewers = checkReviewersRequiredChanges({
+    reviews,
+    rules,
+    requestedReviewerLogins,
+  });
 
   if (checkReviewers !== true) {
     return checkReviewers;
