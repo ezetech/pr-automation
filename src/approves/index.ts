@@ -1,5 +1,6 @@
 import { withDebugLog } from '../utils';
 import { isPrFullyApproved as isPrFullyApprovedFunc } from './is-pr-fully-approved';
+import { getRulesThatHaveAtLeastOneApprover as getRulesThatHaveAtLeastOneApproverFunc } from './get-rules-that-have-at-least-one-approver';
 import { identifyReviewers as identifyReviewersFunc } from './identify-approvers';
 import { areCIChecksPassed as areCIChecksPassedFunc } from './identify-ci';
 import {
@@ -16,3 +17,6 @@ export const checkReviewersRequiredChanges = withDebugLog(
 );
 export const getReviewersLastReviews = withDebugLog(getReviewersLastReviewsFunc);
 export const filterReviewersByState = withDebugLog(filterReviewersByStateFunc);
+export const getRulesThatHaveAtLeastOneApprover = withDebugLog(
+  getRulesThatHaveAtLeastOneApproverFunc,
+);

@@ -92,7 +92,7 @@ function getUsersFromListReviewsResponse(response: any): Record<string, string>[
   }
 }
 
-export async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> {
+async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> {
   const octokit = getMyOctokit();
   const response = await octokit.rest.pulls.listReviews({
     owner: context.repo.owner,
