@@ -71,11 +71,13 @@ export function checkReviewersRequiredChanges({
   reviews,
   rules,
   requestedReviewerLogins,
+  currentPendingReviewers,
   skipRuleThatHaveNoAssignedReviewers = true,
 }: {
   reviews: Reviews;
   rules: Rule[];
   requestedReviewerLogins: string[];
+  currentPendingReviewers: string[];
   skipRuleThatHaveNoAssignedReviewers?: boolean;
 }): string | boolean {
   if (!reviews.length) {

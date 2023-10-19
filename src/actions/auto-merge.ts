@@ -43,7 +43,8 @@ export async function run(): Promise<void> {
     const changedFiles = await github.fetchChangedFiles({ pr });
 
     debug('Fetching pull request reviewers');
-    const requestedReviewerLogins = await github.fetchPullRequestReviewers({ pr });
+    const { allRequestedReviewers, currentPendingReviewers } =
+      await github.fetchPullRequestReviewers({ pr });
 
     const fileChangesGroups = identifyFileChangeGroups({
       fileChangesGroups: config.fileChangesGroups,
@@ -55,7 +56,7 @@ export async function run(): Promise<void> {
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins,
+      requestedReviewerLogins: allRequestedReviewers,
     });
 
     const checks = await github.getCIChecks();
@@ -67,7 +68,8 @@ export async function run(): Promise<void> {
       requiredChecks: config?.options?.requiredChecks,
       reviews,
       checks,
-      requestedReviewerLogins,
+      requestedReviewerLogins: allRequestedReviewers,
+      currentPendingReviewers,
     });
 
     if (isPrFullyApprovedResponse !== true) {

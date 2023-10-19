@@ -167,6 +167,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
         reviews: [],
         rules: [],
         requestedReviewerLogins: [],
+        currentPendingReviewers: [],
       }),
     ).to.equal('Waiting for reviews.');
   });
@@ -180,6 +181,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: [],
       requestedReviewerLogins: ['test3'],
       reviews,
       rules: [
@@ -199,6 +201,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: [],
       requestedReviewerLogins: ['test4'],
       reviews,
       rules: [
@@ -222,6 +225,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: [],
       requestedReviewerLogins: ['test1'],
       reviews,
       rules: [
@@ -241,6 +245,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: [],
       requestedReviewerLogins: ['test1'],
       reviews,
       rules: [
@@ -261,6 +266,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: [],
       requestedReviewerLogins: ['test1', 'test2'],
       reviews,
       rules: [
@@ -280,6 +286,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: ['test2'],
       requestedReviewerLogins: ['test1', 'test2'],
       reviews,
       rules: [
@@ -300,6 +307,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: [],
       requestedReviewerLogins: ['test1', 'test2'],
       reviews,
       rules: [
@@ -324,6 +332,7 @@ describe('should test checkReviewersRequiredChanges: ', () => {
     ]);
 
     const result = checkReviewersRequiredChanges({
+      currentPendingReviewers: ['test4'],
       requestedReviewerLogins: ['test1', 'test2', 'test4'],
       reviews,
       rules: [

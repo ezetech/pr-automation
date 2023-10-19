@@ -35024,7 +35024,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
 ;// CONCATENATED MODULE: ./package.json
-const package_namespaceObject = {"i8":"0.7.2"};
+const package_namespaceObject = {"i8":"0.8.0"};
 ;// CONCATENATED MODULE: ./src/logger.ts
 
 const isTest = process.env.NODE_ENV === 'test';
@@ -35207,7 +35207,10 @@ function fetchPullRequestReviewers({ pr }) {
         ]);
         const concatenatedArray = arr1.concat(arr2);
         const uniqueStrings = [...new Set(concatenatedArray)];
-        return uniqueStrings;
+        return {
+            allRequestedReviewers: uniqueStrings,
+            currentPendingReviewers: arr1,
+        };
     });
 }
 function validatePullRequest(pr) {
@@ -35905,13 +35908,13 @@ function run() {
             debug('Fetching changed files in the pull request');
             const changedFiles = yield fetchChangedFiles({ pr });
             debug('Fetching pull request reviewers');
-            const requestedReviewerLogins = yield fetchPullRequestReviewers({ pr });
+            const { allRequestedReviewers, currentPendingReviewers } = yield fetchPullRequestReviewers({ pr });
             const fileChangesGroups = reviewer_identifyFileChangeGroups({
                 fileChangesGroups: config.fileChangesGroups,
                 changedFiles,
             });
             info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
-            info(`Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(requestedReviewerLogins)}`);
+            info(`Identifying reviewers based on the changed files and PR creator. currentPendingReviewers: ${JSON.stringify(currentPendingReviewers)}. allRequestedReviewers: ${JSON.stringify(allRequestedReviewers)}`);
             const absentEmployeesEmails = inputs.checkReviewerOnSage
                 ? yield sage_getEmployeesWhoAreOutToday({
                     sageBaseUrl: inputs.sageUrl,
@@ -35927,7 +35930,7 @@ function run() {
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins,
+                requestedReviewerLogins: allRequestedReviewers,
                 absentReviewersLogins,
             });
             info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);
