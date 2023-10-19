@@ -50,4 +50,26 @@ describe('should validate config ', () => {
       done((err as Error).message);
     }
   });
+  it('should pass validation with ignoreReassignForMergedPRs', (done) => {
+    try {
+      const params = {
+        options: {
+          ignoreReassignForMergeFrom: 'main',
+        },
+        defaultRules: {},
+        rulesByCreator: {},
+        fileChangesGroups: {},
+      };
+      const result = validateConfig(params);
+      expect(result).to.deep.equal({
+        ...params,
+        options: {
+          ignoreReassignForMergeFrom: 'main',
+        },
+      });
+      done();
+    } catch (err: unknown) {
+      done((err as Error).message);
+    }
+  });
 });

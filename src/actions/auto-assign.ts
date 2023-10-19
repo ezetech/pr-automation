@@ -69,7 +69,8 @@ export async function run(): Promise<void> {
     debug('Fetching changed files in the pull request');
     const changedFiles = await github.fetchChangedFiles({ pr });
     debug('Fetching pull request reviewers');
-    const requestedReviewerLogins = await github.fetchPullRequestReviewers({ pr });
+    const { allRequestedReviewers, currentPendingReviewers } =
+      await github.fetchPullRequestReviewers({ pr });
     const fileChangesGroups = identifyFileChangeGroups({
       fileChangesGroups: config.fileChangesGroups,
       changedFiles,
@@ -77,9 +78,9 @@ export async function run(): Promise<void> {
     info(`Identified changed file groups: ${fileChangesGroups.join(', ')}`);
 
     info(
-      `Identifying reviewers based on the changed files and PR creator. requestedReviewerLogins: ${JSON.stringify(
-        requestedReviewerLogins,
-      )}`,
+      `Identifying reviewers based on the changed files and PR creator. currentPendingReviewers: ${JSON.stringify(
+        currentPendingReviewers,
+      )}. allRequestedReviewers: ${JSON.stringify(allRequestedReviewers)}`,
     );
 
     const absentEmployeesEmails: string[] = inputs.checkReviewerOnSage
@@ -99,7 +100,7 @@ export async function run(): Promise<void> {
       fileChangesGroups,
       rulesByCreator: config.rulesByCreator,
       defaultRules: config.defaultRules,
-      requestedReviewerLogins,
+      requestedReviewerLogins: allRequestedReviewers,
       absentReviewersLogins,
     });
     info(`Author: ${author}. Identified reviewers: ${reviewersToAssign.join(', ')}`);

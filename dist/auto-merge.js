@@ -35024,7 +35024,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
 ;// CONCATENATED MODULE: ./package.json
-const package_namespaceObject = {"i8":"0.7.2"};
+const package_namespaceObject = {"i8":"0.8.0"};
 // EXTERNAL MODULE: ./node_modules/yaml/dist/index.js
 var dist = __nccwpck_require__(4083);
 // EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js
@@ -35038,6 +35038,7 @@ const schema = lib.object()
     options: lib.object({
         ignoredLabels: lib.array().items(lib.string()).optional(),
         ignoreReassignForMergedPRs: lib.boolean().optional(),
+        ignoreReassignForMergeFrom: lib.string().optional(),
         requiredChecks: lib.array().items(lib.string()),
         withMessage: {
             messageId: lib.string().optional(),
@@ -35206,7 +35207,10 @@ function fetchPullRequestReviewers({ pr }) {
         ]);
         const concatenatedArray = arr1.concat(arr2);
         const uniqueStrings = [...new Set(concatenatedArray)];
-        return uniqueStrings;
+        return {
+            allRequestedReviewers: uniqueStrings,
+            currentPendingReviewers: arr1,
+        };
     });
 }
 function validatePullRequest(pr) {
@@ -35531,7 +35535,7 @@ function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
 
 ;// CONCATENATED MODULE: ./src/approves/is-pr-fully-approved.ts
 
-function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedReviewerLogins, }) {
+function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedReviewerLogins, currentPendingReviewers, }) {
     const checkCIChecks = approves_areCIChecksPassed({ checks, requiredChecks });
     if (checkCIChecks !== true) {
         return checkCIChecks;
@@ -35540,6 +35544,7 @@ function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedRe
         reviews,
         rules,
         requestedReviewerLogins,
+        currentPendingReviewers,
     });
     if (checkReviewers !== true) {
         return checkReviewers;
@@ -35709,7 +35714,7 @@ function filterReviewersByState(reviewersFullData) {
  * Check if all required reviewers approved the PR
  * @returns true if all required reviewers approved the PR, otherwise return a string with the error message
  */
-function checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins, skipRuleThatHaveNoAssignedReviewers = true, }) {
+function checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins, currentPendingReviewers, skipRuleThatHaveNoAssignedReviewers = true, }) {
     if (!reviews.length) {
         return 'Waiting for reviews.';
     }
@@ -35725,10 +35730,14 @@ function checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins
     }
     for (const role of rulesToMatch) {
         if (role.required) {
-            const requiredReviewers = role.reviewers.filter((reviewer) => {
+            const requiredReviewersThatApproved = role.reviewers.filter((reviewer) => {
+                const isPendingNow = currentPendingReviewers.includes(reviewer);
+                if (isPendingNow) {
+                    return false;
+                }
                 return reviewersByState.approve.includes(reviewer);
             });
-            if (requiredReviewers.length < role.required) {
+            if (requiredReviewersThatApproved.length < role.required) {
                 return `Waiting ${role.required} approve(s) from ${role.reviewers.join(', ')} to approve.`;
             }
         }
@@ -35763,6 +35772,16 @@ function checkIsMergePRCommit({ parents, message }) {
     }
     return message.startsWith('Merge pull request');
 }
+function checkIsMergeFromBranch({ parents, message }, branchToCheck) {
+    if (parents.length < 2) {
+        return false;
+    }
+    const normalizedMessage = message.replace(/['`"]/g, '"');
+    const mergePattern1 = `Merge branch "${branchToCheck}"`;
+    const mergePattern2 = `Merge remote-tracking branch "origin/${branchToCheck}"`;
+    return (normalizedMessage.startsWith(mergePattern1) ||
+        normalizedMessage.startsWith(mergePattern2));
+}
 function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     if (isDraft) {
         return false;
@@ -35770,7 +35789,7 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     if (!options) {
         return true;
     }
-    const { ignoredLabels, ignoreReassignForMergedPRs } = options;
+    const { ignoredLabels, ignoreReassignForMergedPRs, ignoreReassignForMergeFrom } = options;
     const includesIgnoredLabels = currentLabels.some((currentLabel) => {
         return (ignoredLabels || []).includes(currentLabel);
     });
@@ -35781,6 +35800,13 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
         const isMergePRCommit = checkIsMergePRCommit(commitData);
         logger_debug(`isMergePRCommit: ${isMergePRCommit}`);
         if (isMergePRCommit) {
+            return false;
+        }
+    }
+    if (ignoreReassignForMergeFrom && commitData) {
+        const isMergeFromIgnoredBranch = checkIsMergeFromBranch(commitData, ignoreReassignForMergeFrom);
+        logger_debug(`isMergeFromIgnoredBranch: ${isMergeFromIgnoredBranch}`);
+        if (isMergeFromIgnoredBranch) {
             return false;
         }
     }
@@ -36156,7 +36182,7 @@ function run() {
             logger_debug('Fetching changed files in the pull request');
             const changedFiles = yield fetchChangedFiles({ pr });
             logger_debug('Fetching pull request reviewers');
-            const requestedReviewerLogins = yield fetchPullRequestReviewers({ pr });
+            const { allRequestedReviewers, currentPendingReviewers } = yield fetchPullRequestReviewers({ pr });
             const fileChangesGroups = reviewer_identifyFileChangeGroups({
                 fileChangesGroups: config.fileChangesGroups,
                 changedFiles,
@@ -36166,7 +36192,7 @@ function run() {
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                requestedReviewerLogins,
+                requestedReviewerLogins: allRequestedReviewers,
             });
             const checks = yield getCIChecks();
             const reviews = yield getReviews();
@@ -36175,7 +36201,8 @@ function run() {
                 requiredChecks: (_a = config === null || config === void 0 ? void 0 : config.options) === null || _a === void 0 ? void 0 : _a.requiredChecks,
                 reviews,
                 checks,
-                requestedReviewerLogins,
+                requestedReviewerLogins: allRequestedReviewers,
+                currentPendingReviewers,
             });
             if (isPrFullyApprovedResponse !== true) {
                 info(isPrFullyApprovedResponse || 'PR is not fully approved');

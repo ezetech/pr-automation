@@ -71,11 +71,13 @@ export function checkReviewersRequiredChanges({
   reviews,
   rules,
   requestedReviewerLogins,
+  currentPendingReviewers,
   skipRuleThatHaveNoAssignedReviewers = true,
 }: {
   reviews: Reviews;
   rules: Rule[];
   requestedReviewerLogins: string[];
+  currentPendingReviewers: string[];
   skipRuleThatHaveNoAssignedReviewers?: boolean;
 }): string | boolean {
   if (!reviews.length) {
@@ -99,11 +101,17 @@ export function checkReviewersRequiredChanges({
 
   for (const role of rulesToMatch) {
     if (role.required) {
-      const requiredReviewers = role.reviewers.filter((reviewer) => {
+      const requiredReviewersThatApproved = role.reviewers.filter((reviewer) => {
+        const isPendingNow = currentPendingReviewers.includes(reviewer);
+
+        if (isPendingNow) {
+          return false;
+        }
+
         return reviewersByState.approve.includes(reviewer);
       });
 
-      if (requiredReviewers.length < role.required) {
+      if (requiredReviewersThatApproved.length < role.required) {
         return `Waiting ${role.required} approve(s) from ${role.reviewers.join(
           ', ',
         )} to approve.`;

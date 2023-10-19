@@ -6,6 +6,7 @@ const schema = Joi.object<Config>()
     options: Joi.object({
       ignoredLabels: Joi.array().items(Joi.string()).optional(),
       ignoreReassignForMergedPRs: Joi.boolean().optional(),
+      ignoreReassignForMergeFrom: Joi.string().optional(),
       requiredChecks: Joi.array().items(Joi.string()),
       withMessage: {
         messageId: Joi.string().optional(),

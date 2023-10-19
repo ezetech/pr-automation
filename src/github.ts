@@ -115,14 +115,20 @@ async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> 
   return result;
 }
 
-export async function fetchPullRequestReviewers({ pr }: { pr: PullRequest }) {
+export async function fetchPullRequestReviewers({ pr }: { pr: PullRequest }): Promise<{
+  allRequestedReviewers: string[];
+  currentPendingReviewers: string[];
+}> {
   const [arr1, arr2] = await Promise.all([
     fetchListRequestedReviewers({ pr }),
     fetchListReviews({ pr }),
   ]);
   const concatenatedArray = arr1.concat(arr2);
   const uniqueStrings = [...new Set(concatenatedArray)];
-  return uniqueStrings;
+  return {
+    allRequestedReviewers: uniqueStrings,
+    currentPendingReviewers: arr1,
+  };
 }
 
 export function validatePullRequest(pr: PullRequest): string | null {

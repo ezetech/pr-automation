@@ -15,6 +15,7 @@ type Options = {
   ignoredLabels?: string[];
   requiredChecks?: string[];
   ignoreReassignForMergedPRs?: boolean;
+  ignoreReassignForMergeFrom?: string;
   withMessage?: {
     messageId?: string;
   };
