@@ -35046,6 +35046,7 @@ const schema = lib.object()
     options: lib.object({
         ignoredLabels: lib.array().items(lib.string()).optional(),
         ignoreReassignForMergedPRs: lib.boolean().optional(),
+        ignoreReassignForMergeFrom: lib.string().optional(),
         requiredChecks: lib.array().items(lib.string()),
         withMessage: {
             messageId: lib.string().optional(),
@@ -35541,6 +35542,16 @@ function checkIsMergePRCommit({ parents, message }) {
     }
     return message.startsWith('Merge pull request');
 }
+function checkIsMergeFromBranch({ parents, message }, branchToCheck) {
+    if (parents.length < 2) {
+        return false;
+    }
+    const normalizedMessage = message.replace(/['`"]/g, '"');
+    const mergePattern1 = `Merge branch "${branchToCheck}"`;
+    const mergePattern2 = `Merge remote-tracking branch "origin/${branchToCheck}"`;
+    return (normalizedMessage.startsWith(mergePattern1) ||
+        normalizedMessage.startsWith(mergePattern2));
+}
 function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     if (isDraft) {
         return false;
@@ -35548,7 +35559,7 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     if (!options) {
         return true;
     }
-    const { ignoredLabels, ignoreReassignForMergedPRs } = options;
+    const { ignoredLabels, ignoreReassignForMergedPRs, ignoreReassignForMergeFrom } = options;
     const includesIgnoredLabels = currentLabels.some((currentLabel) => {
         return (ignoredLabels || []).includes(currentLabel);
     });
@@ -35559,6 +35570,13 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
         const isMergePRCommit = checkIsMergePRCommit(commitData);
         debug(`isMergePRCommit: ${isMergePRCommit}`);
         if (isMergePRCommit) {
+            return false;
+        }
+    }
+    if (ignoreReassignForMergeFrom && commitData) {
+        const isMergeFromIgnoredBranch = checkIsMergeFromBranch(commitData, ignoreReassignForMergeFrom);
+        debug(`isMergeFromIgnoredBranch: ${isMergeFromIgnoredBranch}`);
+        if (isMergeFromIgnoredBranch) {
             return false;
         }
     }

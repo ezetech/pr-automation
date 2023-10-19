@@ -12,6 +12,25 @@ function checkIsMergePRCommit({ parents, message }: CommitData): boolean {
   return message.startsWith('Merge pull request');
 }
 
+function checkIsMergeFromBranch(
+  { parents, message }: CommitData,
+  branchToCheck: string,
+): boolean {
+  if (parents.length < 2) {
+    return false;
+  }
+
+  const normalizedMessage = message.replace(/['`"]/g, '"');
+
+  const mergePattern1 = `Merge branch "${branchToCheck}"`;
+  const mergePattern2 = `Merge remote-tracking branch "origin/${branchToCheck}"`;
+
+  return (
+    normalizedMessage.startsWith(mergePattern1) ||
+    normalizedMessage.startsWith(mergePattern2)
+  );
+}
+
 export function shouldRequestReview({
   isDraft,
   options,
@@ -29,7 +48,8 @@ export function shouldRequestReview({
   if (!options) {
     return true;
   }
-  const { ignoredLabels, ignoreReassignForMergedPRs } = options;
+  const { ignoredLabels, ignoreReassignForMergedPRs, ignoreReassignForMergeFrom } =
+    options;
   const includesIgnoredLabels = currentLabels.some((currentLabel) => {
     return (ignoredLabels || []).includes(currentLabel);
   });
@@ -40,6 +60,16 @@ export function shouldRequestReview({
     const isMergePRCommit = checkIsMergePRCommit(commitData);
     debug(`isMergePRCommit: ${isMergePRCommit}`);
     if (isMergePRCommit) {
+      return false;
+    }
+  }
+  if (ignoreReassignForMergeFrom && commitData) {
+    const isMergeFromIgnoredBranch = checkIsMergeFromBranch(
+      commitData,
+      ignoreReassignForMergeFrom,
+    );
+    debug(`isMergeFromIgnoredBranch: ${isMergeFromIgnoredBranch}`);
+    if (isMergeFromIgnoredBranch) {
       return false;
     }
   }

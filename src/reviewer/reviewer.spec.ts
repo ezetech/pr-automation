@@ -506,6 +506,106 @@ describe('should test shouldRequestReview:', () => {
     });
     expect(result).to.be.equal(false, 'Should not request review');
   });
+  it('should not request review, cos merge from ignored branch', () => {
+    const result = shouldRequestReview({
+      isDraft: false,
+      currentLabels: [],
+      options: {
+        ignoreReassignForMergeFrom: 'main',
+      },
+      commitData: {
+        message: "Merge branch 'main' into repo/branch-1",
+        parents: [
+          {
+            sha: 'sha1',
+            url: 'sha1url',
+            html_url: 'sha1url',
+          },
+          {
+            sha: 'sha2',
+            url: 'sha2url',
+            html_url: 'sha2url',
+          },
+        ],
+      },
+    });
+    expect(result).to.be.equal(false, 'Should not request review');
+  });
+  it('should request review, cos merge is NOT from ignored branch', () => {
+    const result = shouldRequestReview({
+      isDraft: false,
+      currentLabels: [],
+      options: {
+        ignoreReassignForMergeFrom: 'main',
+      },
+      commitData: {
+        message: "Merge branch 'branch-2' into repo/branch-1",
+        parents: [
+          {
+            sha: 'sha1',
+            url: 'sha1url',
+            html_url: 'sha1url',
+          },
+          {
+            sha: 'sha2',
+            url: 'sha2url',
+            html_url: 'sha2url',
+          },
+        ],
+      },
+    });
+    expect(result).to.be.equal(true, 'Should request review');
+  });
+  it('should not request review, cos merge from ignored branch', () => {
+    const result = shouldRequestReview({
+      isDraft: false,
+      currentLabels: [],
+      options: {
+        ignoreReassignForMergeFrom: 'main',
+      },
+      commitData: {
+        message: "Merge remote-tracking branch 'origin/main'",
+        parents: [
+          {
+            sha: 'sha1',
+            url: 'sha1url',
+            html_url: 'sha1url',
+          },
+          {
+            sha: 'sha2',
+            url: 'sha2url',
+            html_url: 'sha2url',
+          },
+        ],
+      },
+    });
+    expect(result).to.be.equal(false, 'Should not request review');
+  });
+  it('should request review, cos merge is NOT from ignored branch', () => {
+    const result = shouldRequestReview({
+      isDraft: false,
+      currentLabels: [],
+      options: {
+        ignoreReassignForMergeFrom: 'main',
+      },
+      commitData: {
+        message: "Merge remote-tracking branch 'origin/branch-1'",
+        parents: [
+          {
+            sha: 'sha1',
+            url: 'sha1url',
+            html_url: 'sha1url',
+          },
+          {
+            sha: 'sha2',
+            url: 'sha2url',
+            html_url: 'sha2url',
+          },
+        ],
+      },
+    });
+    expect(result).to.be.equal(true, 'Should request review');
+  });
   it('should request review, even though merge commit is present, but related option is disabled', () => {
     const result = shouldRequestReview({
       isDraft: false,
