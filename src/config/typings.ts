@@ -108,6 +108,9 @@ export interface Inputs {
   doNotMergeLabels: string;
   config: string;
   doNotMergeOnBaseBranch: string;
+}
+
+export interface JiraInputs {
   shouldChangeJiraIssueStatus: boolean;
   jiraToken: string;
   jiraAccount: string;
@@ -124,4 +127,38 @@ export interface Reviewer {
   createdAt?: Date;
   updatedAt?: Date;
   submittedAt?: Date;
+}
+
+export interface IPullRequest {
+  author: string;
+  isDraft: boolean;
+  isOpen: boolean;
+  number: number;
+  labelNames: string[];
+  branchName: string;
+  baseBranchName: string;
+}
+
+export interface IPullRequestGraphQL {
+  repository: {
+    pullRequest: {
+      number: number;
+      author: {
+        login: string;
+      };
+      isDraft: boolean;
+      state: string;
+      labels: {
+        nodes: {
+          name: string;
+        }[];
+      };
+      headRef: {
+        name: string;
+      };
+      baseRef: {
+        name: string;
+      };
+    };
+  };
 }

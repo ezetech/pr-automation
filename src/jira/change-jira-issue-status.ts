@@ -1,4 +1,4 @@
-import { Inputs, JiraIssue, JiraTransitions } from '../config/typings';
+import { JiraInputs, JiraIssue, JiraTransitions } from '../config/typings';
 import { getIssueIdFromBranchName, jiraClient, getTransitionId } from './';
 
 type Response = {
@@ -11,7 +11,7 @@ export async function changeJiraIssueStatus({
   inputs,
 }: {
   branchName: string;
-  inputs: Inputs;
+  inputs: JiraInputs;
 }): Promise<Response> {
   const issueId = getIssueIdFromBranchName(branchName);
 
