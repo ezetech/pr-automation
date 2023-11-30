@@ -3988,7 +3988,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 var universalUserAgent = __nccwpck_require__(5030);
 var beforeAfterHook = __nccwpck_require__(3682);
 var request = __nccwpck_require__(6234);
-var graphql = __nccwpck_require__(8467);
+var graphql = __nccwpck_require__(6442);
 var authToken = __nccwpck_require__(334);
 
 function _objectWithoutPropertiesLoose(source, excluded) {
@@ -4156,6 +4156,132 @@ Octokit.VERSION = VERSION;
 Octokit.plugins = [];
 
 exports.Octokit = Octokit;
+//# sourceMappingURL=index.js.map
+
+
+/***/ }),
+
+/***/ 6442:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+
+var request = __nccwpck_require__(6234);
+var universalUserAgent = __nccwpck_require__(5030);
+
+const VERSION = "4.8.0";
+
+function _buildMessageForResponseErrors(data) {
+  return `Request failed due to following response errors:\n` + data.errors.map(e => ` - ${e.message}`).join("\n");
+}
+
+class GraphqlResponseError extends Error {
+  constructor(request, headers, response) {
+    super(_buildMessageForResponseErrors(response));
+    this.request = request;
+    this.headers = headers;
+    this.response = response;
+    this.name = "GraphqlResponseError"; // Expose the errors and response data in their shorthand properties.
+
+    this.errors = response.errors;
+    this.data = response.data; // Maintains proper stack trace (only available on V8)
+
+    /* istanbul ignore next */
+
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
+
+}
+
+const NON_VARIABLE_OPTIONS = ["method", "baseUrl", "url", "headers", "request", "query", "mediaType"];
+const FORBIDDEN_VARIABLE_OPTIONS = ["query", "method", "url"];
+const GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
+function graphql(request, query, options) {
+  if (options) {
+    if (typeof query === "string" && "query" in options) {
+      return Promise.reject(new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
+    }
+
+    for (const key in options) {
+      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
+      return Promise.reject(new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`));
+    }
+  }
+
+  const parsedOptions = typeof query === "string" ? Object.assign({
+    query
+  }, options) : query;
+  const requestOptions = Object.keys(parsedOptions).reduce((result, key) => {
+    if (NON_VARIABLE_OPTIONS.includes(key)) {
+      result[key] = parsedOptions[key];
+      return result;
+    }
+
+    if (!result.variables) {
+      result.variables = {};
+    }
+
+    result.variables[key] = parsedOptions[key];
+    return result;
+  }, {}); // workaround for GitHub Enterprise baseUrl set with /api/v3 suffix
+  // https://github.com/octokit/auth-app.js/issues/111#issuecomment-657610451
+
+  const baseUrl = parsedOptions.baseUrl || request.endpoint.DEFAULTS.baseUrl;
+
+  if (GHES_V3_SUFFIX_REGEX.test(baseUrl)) {
+    requestOptions.url = baseUrl.replace(GHES_V3_SUFFIX_REGEX, "/api/graphql");
+  }
+
+  return request(requestOptions).then(response => {
+    if (response.data.errors) {
+      const headers = {};
+
+      for (const key of Object.keys(response.headers)) {
+        headers[key] = response.headers[key];
+      }
+
+      throw new GraphqlResponseError(requestOptions, headers, response.data);
+    }
+
+    return response.data.data;
+  });
+}
+
+function withDefaults(request$1, newDefaults) {
+  const newRequest = request$1.defaults(newDefaults);
+
+  const newApi = (query, options) => {
+    return graphql(newRequest, query, options);
+  };
+
+  return Object.assign(newApi, {
+    defaults: withDefaults.bind(null, newRequest),
+    endpoint: request.request.endpoint
+  });
+}
+
+const graphql$1 = withDefaults(request.request, {
+  headers: {
+    "user-agent": `octokit-graphql.js/${VERSION} ${universalUserAgent.getUserAgent()}`
+  },
+  method: "POST",
+  url: "/graphql"
+});
+function withCustomRequest(customRequest) {
+  return withDefaults(customRequest, {
+    method: "POST",
+    url: "/graphql"
+  });
+}
+
+exports.GraphqlResponseError = GraphqlResponseError;
+exports.graphql = graphql$1;
+exports.withCustomRequest = withCustomRequest;
 //# sourceMappingURL=index.js.map
 
 
@@ -4554,132 +4680,6 @@ const DEFAULTS = {
 const endpoint = withDefaults(null, DEFAULTS);
 
 exports.endpoint = endpoint;
-//# sourceMappingURL=index.js.map
-
-
-/***/ }),
-
-/***/ 8467:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-
-var request = __nccwpck_require__(6234);
-var universalUserAgent = __nccwpck_require__(5030);
-
-const VERSION = "4.8.0";
-
-function _buildMessageForResponseErrors(data) {
-  return `Request failed due to following response errors:\n` + data.errors.map(e => ` - ${e.message}`).join("\n");
-}
-
-class GraphqlResponseError extends Error {
-  constructor(request, headers, response) {
-    super(_buildMessageForResponseErrors(response));
-    this.request = request;
-    this.headers = headers;
-    this.response = response;
-    this.name = "GraphqlResponseError"; // Expose the errors and response data in their shorthand properties.
-
-    this.errors = response.errors;
-    this.data = response.data; // Maintains proper stack trace (only available on V8)
-
-    /* istanbul ignore next */
-
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, this.constructor);
-    }
-  }
-
-}
-
-const NON_VARIABLE_OPTIONS = ["method", "baseUrl", "url", "headers", "request", "query", "mediaType"];
-const FORBIDDEN_VARIABLE_OPTIONS = ["query", "method", "url"];
-const GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
-function graphql(request, query, options) {
-  if (options) {
-    if (typeof query === "string" && "query" in options) {
-      return Promise.reject(new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
-    }
-
-    for (const key in options) {
-      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
-      return Promise.reject(new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`));
-    }
-  }
-
-  const parsedOptions = typeof query === "string" ? Object.assign({
-    query
-  }, options) : query;
-  const requestOptions = Object.keys(parsedOptions).reduce((result, key) => {
-    if (NON_VARIABLE_OPTIONS.includes(key)) {
-      result[key] = parsedOptions[key];
-      return result;
-    }
-
-    if (!result.variables) {
-      result.variables = {};
-    }
-
-    result.variables[key] = parsedOptions[key];
-    return result;
-  }, {}); // workaround for GitHub Enterprise baseUrl set with /api/v3 suffix
-  // https://github.com/octokit/auth-app.js/issues/111#issuecomment-657610451
-
-  const baseUrl = parsedOptions.baseUrl || request.endpoint.DEFAULTS.baseUrl;
-
-  if (GHES_V3_SUFFIX_REGEX.test(baseUrl)) {
-    requestOptions.url = baseUrl.replace(GHES_V3_SUFFIX_REGEX, "/api/graphql");
-  }
-
-  return request(requestOptions).then(response => {
-    if (response.data.errors) {
-      const headers = {};
-
-      for (const key of Object.keys(response.headers)) {
-        headers[key] = response.headers[key];
-      }
-
-      throw new GraphqlResponseError(requestOptions, headers, response.data);
-    }
-
-    return response.data.data;
-  });
-}
-
-function withDefaults(request$1, newDefaults) {
-  const newRequest = request$1.defaults(newDefaults);
-
-  const newApi = (query, options) => {
-    return graphql(newRequest, query, options);
-  };
-
-  return Object.assign(newApi, {
-    defaults: withDefaults.bind(null, newRequest),
-    endpoint: request.request.endpoint
-  });
-}
-
-const graphql$1 = withDefaults(request.request, {
-  headers: {
-    "user-agent": `octokit-graphql.js/${VERSION} ${universalUserAgent.getUserAgent()}`
-  },
-  method: "POST",
-  url: "/graphql"
-});
-function withCustomRequest(customRequest) {
-  return withDefaults(customRequest, {
-    method: "POST",
-    url: "/graphql"
-  });
-}
-
-exports.GraphqlResponseError = GraphqlResponseError;
-exports.graphql = graphql$1;
-exports.withCustomRequest = withCustomRequest;
 //# sourceMappingURL=index.js.map
 
 
@@ -35024,7 +35024,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
 ;// CONCATENATED MODULE: ./package.json
-const package_namespaceObject = {"i8":"0.8.0"};
+const package_namespaceObject = {"i8":"0.9.0"};
 // EXTERNAL MODULE: ./node_modules/yaml/dist/index.js
 var dist = __nccwpck_require__(4083);
 // EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js
@@ -35114,40 +35114,69 @@ function getMyOctokit() {
     const octokit = (0,github.getOctokit)(myToken);
     return octokit;
 }
-class PullRequest {
-    constructor(data) {
-        this._pr = data;
-    }
-    get author() {
-        return this._pr.user.login;
-    }
-    get isDraft() {
-        return Boolean(this._pr.draft);
-    }
-    get isOpen() {
-        return this._pr.state === 'open';
-    }
-    get number() {
-        return this._pr.number;
-    }
-    get labelNames() {
-        return this._pr.labels.map((label) => label.name);
-    }
-    get branchName() {
-        return this._pr.head.ref;
-    }
-    get baseBranchName() {
-        return this._pr.base.ref;
-    }
-}
-function getPullRequest() {
-    const pr = github.context.payload.pull_request;
-    // @todo validate PR data
-    if (!pr) {
-        throw new Error('No pull_request data in context.payload');
-    }
-    logger_debug(`PR event payload: ${JSON.stringify(pr)}`);
-    return new PullRequest(pr);
+const transformPullRequestFromContext = (data) => ({
+    author: data.user.login,
+    isDraft: data.draft,
+    isOpen: data.state === 'open',
+    number: data.number,
+    labelNames: data.labels.map((label) => label.name),
+    branchName: data.head.ref,
+    baseBranchName: data.base.ref,
+});
+const transformPullRequestFromGraphQL = ({ repository: { pullRequest }, }) => ({
+    author: pullRequest.author.login,
+    isDraft: pullRequest.isDraft,
+    isOpen: pullRequest.state === 'OPEN',
+    number: pullRequest.number,
+    labelNames: pullRequest.labels.nodes.map((label) => label.name),
+    branchName: pullRequest.headRef.name,
+    baseBranchName: pullRequest.baseRef.name,
+});
+function getPullRequest({ name, owner, pullNumber, }) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const pr = github.context.payload.pull_request;
+        // @todo validate PR data
+        if (!pr) {
+            const octokit = getMyOctokit();
+            try {
+                const pullRequest = yield octokit.graphql(`
+          {
+            repository(owner: "${owner}", name: "${name}") {
+              pullRequest(number: ${pullNumber}) {
+                number
+                author {
+                  login
+                }
+                isDraft
+                state
+                labels (first: 100) {
+                  nodes {
+                    name
+                  }
+                }
+                headRef {
+                  name
+                }
+                baseRef {
+                  name
+                }
+              }
+            }
+          }
+        `);
+                if (!pullRequest) {
+                    throw new Error('No pull_request data in context.payload');
+                }
+                return transformPullRequestFromGraphQL(pullRequest);
+            }
+            catch (err) {
+                logger_warning(err);
+                throw err;
+            }
+        }
+        logger_debug(`PR event payload: ${JSON.stringify(pr)}`);
+        return transformPullRequestFromContext(pr);
+    });
 }
 function fetchListRequestedReviewers({ pr, }) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -35166,7 +35195,7 @@ function fetchListRequestedReviewers({ pr, }) {
 function getUsersFromListReviewsResponse(response) {
     var _a;
     try {
-        let users = (_a = response === null || response === void 0 ? void 0 : response.data) === null || _a === void 0 ? void 0 : _a.users;
+        const users = (_a = response === null || response === void 0 ? void 0 : response.data) === null || _a === void 0 ? void 0 : _a.users;
         if (!users) {
             const arr = response === null || response === void 0 ? void 0 : response.data;
             return arr.map((item) => item.user);
@@ -35238,14 +35267,6 @@ function getInputs() {
         token: (0,core.getInput)('token', { required: true }),
         config: (0,core.getInput)('config', { required: true }),
         doNotMergeOnBaseBranch: (0,core.getInput)('do-not-merge-on-base-branch'),
-        shouldChangeJiraIssueStatus: (0,core.getInput)('should-change-jira-issue-status', {
-            required: false,
-        }) === 'true',
-        jiraToken: (0,core.getInput)('jira-token', { required: false }),
-        jiraAccount: (0,core.getInput)('jira-account', { required: false }),
-        jiraEndpoint: (0,core.getInput)('jira-endpoint', { required: false }),
-        jiraMoveIssueFrom: (0,core.getInput)('jira-move-issue-from', { required: false }),
-        jiraMoveTransitionName: (0,core.getInput)('jira-move-transition-name', { required: false }),
     };
 }
 function fetchConfig() {
@@ -36158,7 +36179,21 @@ function run() {
     return auto_merge_awaiter(this, void 0, void 0, function* () {
         try {
             info(`Staring PR auto merge version ${package_namespaceObject.i8}.`);
-            const inputs = getInputs();
+            const [owner, repo] = (0,core.getInput)('repository').split('/');
+            const inputs = {
+                owner,
+                repo,
+                pullRequestNumber: Number((0,core.getInput)('pullRequestNumber', { required: true })),
+                comment: (0,core.getInput)('comment'),
+                shouldChangeJiraIssueStatus: (0,core.getInput)('should-change-jira-issue-status', {
+                    required: true,
+                }) === 'true',
+                jiraToken: (0,core.getInput)('jira-token', { required: true }),
+                jiraAccount: (0,core.getInput)('jira-account', { required: true }),
+                jiraEndpoint: (0,core.getInput)('jira-endpoint', { required: true }),
+                jiraMoveIssueFrom: (0,core.getInput)('jira-move-issue-from', { required: true }),
+                jiraMoveTransitionName: (0,core.getInput)('jira-move-transition-name', { required: true }),
+            };
             let config;
             logger_debug('fetching config');
             try {
@@ -36172,7 +36207,11 @@ function run() {
                 }
                 throw err;
             }
-            const pr = getPullRequest();
+            const pr = yield getPullRequest({
+                name: inputs.repo,
+                owner: inputs.owner,
+                pullNumber: inputs.pullRequestNumber,
+            });
             const prValidationError = validatePullRequest(pr);
             if (prValidationError) {
                 logger_warning(prValidationError);
@@ -36221,7 +36260,7 @@ function run() {
                     logger_warning(jiraResponse.message);
                 }
             }
-            core.setOutput('merged', true);
+            (0,core.setOutput)('merged', true);
         }
         catch (err) {
             logger_error(err);

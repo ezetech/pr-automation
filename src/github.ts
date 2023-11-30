@@ -3,10 +3,18 @@ import { context, getOctokit } from '@actions/github';
 import { getInput } from '@actions/core';
 import { WebhookPayload } from '@actions/github/lib/interfaces';
 import { RestEndpointMethodTypes } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/parameters-and-response-types';
-import { validateConfig } from './config';
-import { Config, Inputs, Strategy, Reviews, Checks } from './config/typings';
-import { debug, error, warning } from './logger';
 import { Endpoints } from '@octokit/types';
+import { validateConfig } from './config';
+import {
+  Config,
+  Inputs,
+  Strategy,
+  Reviews,
+  Checks,
+  IPullRequest,
+  IPullRequestGraphQL,
+} from './config/typings';
+import { debug, error, warning } from './logger';
 
 function getMyOctokit() {
   const myToken = getInput('token');
@@ -15,55 +23,88 @@ function getMyOctokit() {
   return octokit;
 }
 
-class PullRequest {
-  private _pr: Required<WebhookPayload>['pull_request'];
-  constructor(data: Required<WebhookPayload>['pull_request']) {
-    this._pr = data;
-  }
+const transformPullRequestFromContext = (
+  data: Required<WebhookPayload>['pull_request'],
+): IPullRequest => ({
+  author: data.user.login,
+  isDraft: data.draft,
+  isOpen: data.state === 'open',
+  number: data.number,
+  labelNames: (data.labels as { name: string }[]).map((label) => label.name),
+  branchName: data.head.ref,
+  baseBranchName: data.base.ref,
+});
 
-  get author(): string {
-    return this._pr.user.login;
-  }
+const transformPullRequestFromGraphQL = ({
+  repository: { pullRequest },
+}: IPullRequestGraphQL): IPullRequest => ({
+  author: pullRequest.author.login,
+  isDraft: pullRequest.isDraft,
+  isOpen: pullRequest.state === 'OPEN',
+  number: pullRequest.number,
+  labelNames: (pullRequest.labels.nodes as { name: string }[]).map((label) => label.name),
+  branchName: pullRequest.headRef.name,
+  baseBranchName: pullRequest.baseRef.name,
+});
 
-  get isDraft(): boolean {
-    return Boolean(this._pr.draft);
-  }
-
-  get isOpen(): boolean {
-    return this._pr.state === 'open';
-  }
-
-  get number(): number {
-    return this._pr.number;
-  }
-
-  get labelNames(): string[] {
-    return (this._pr.labels as { name: string }[]).map((label) => label.name);
-  }
-
-  get branchName(): string {
-    return this._pr.head.ref;
-  }
-
-  get baseBranchName(): string {
-    return this._pr.base.ref;
-  }
-}
-
-export function getPullRequest(): PullRequest {
+export async function getPullRequest({
+  name,
+  owner,
+  pullNumber,
+}: {
+  name: string;
+  owner: string;
+  pullNumber: number;
+}): Promise<IPullRequest> {
   const pr = context.payload.pull_request;
   // @todo validate PR data
   if (!pr) {
-    throw new Error('No pull_request data in context.payload');
+    const octokit = getMyOctokit();
+    try {
+      const pullRequest = await octokit.graphql<IPullRequestGraphQL>(
+        `
+          {
+            repository(owner: "${owner}", name: "${name}") {
+              pullRequest(number: ${pullNumber}) {
+                number
+                author {
+                  login
+                }
+                isDraft
+                state
+                labels (first: 100) {
+                  nodes {
+                    name
+                  }
+                }
+                headRef {
+                  name
+                }
+                baseRef {
+                  name
+                }
+              }
+            }
+          }
+        `,
+      );
+      if (!pullRequest) {
+        throw new Error('No pull_request data in context.payload');
+      }
+      return transformPullRequestFromGraphQL(pullRequest);
+    } catch (err) {
+      warning(err as Error);
+      throw err;
+    }
   }
   debug(`PR event payload: ${JSON.stringify(pr)}`);
-  return new PullRequest(pr);
+  return transformPullRequestFromContext(pr);
 }
 
 async function fetchListRequestedReviewers({
   pr,
 }: {
-  pr: PullRequest;
+  pr: IPullRequest;
 }): Promise<string[]> {
   const octokit = getMyOctokit();
   const response = await octokit.rest.pulls.listRequestedReviewers({
@@ -81,7 +122,7 @@ async function fetchListRequestedReviewers({
 
 function getUsersFromListReviewsResponse(response: any): Record<string, string>[] {
   try {
-    let users: Record<string, unknown>[] = response?.data?.users;
+    const users: Record<string, unknown>[] = response?.data?.users;
     if (!users) {
       const arr = response?.data;
       return arr.map((item: { user: Record<string, string> }) => item.user);
@@ -92,7 +133,7 @@ function getUsersFromListReviewsResponse(response: any): Record<string, string>[
   }
 }
 
-async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> {
+async function fetchListReviews({ pr }: { pr: IPullRequest }): Promise<string[]> {
   const octokit = getMyOctokit();
   const response = await octokit.rest.pulls.listReviews({
     owner: context.repo.owner,
@@ -115,7 +156,7 @@ async function fetchListReviews({ pr }: { pr: PullRequest }): Promise<string[]> 
   return result;
 }
 
-export async function fetchPullRequestReviewers({ pr }: { pr: PullRequest }): Promise<{
+export async function fetchPullRequestReviewers({ pr }: { pr: IPullRequest }): Promise<{
   allRequestedReviewers: string[];
   currentPendingReviewers: string[];
 }> {
@@ -131,7 +172,7 @@ export async function fetchPullRequestReviewers({ pr }: { pr: PullRequest }): Pr
   };
 }
 
-export function validatePullRequest(pr: PullRequest): string | null {
+export function validatePullRequest(pr: IPullRequest): string | null {
   if (pr.isDraft) {
     return `Pull request #${pr.number} is a draft`;
   }
@@ -147,7 +188,7 @@ export function validatePullRequest(pr: PullRequest): string | null {
   return null;
 }
 
-export function getInputs(): Inputs {
+function getInputs(): Inputs {
   const [owner, repo] = getInput('repository').split('/');
 
   return {
@@ -161,15 +202,6 @@ export function getInputs(): Inputs {
     token: getInput('token', { required: true }),
     config: getInput('config', { required: true }),
     doNotMergeOnBaseBranch: getInput('do-not-merge-on-base-branch'),
-    shouldChangeJiraIssueStatus:
-      getInput('should-change-jira-issue-status', {
-        required: false,
-      }) === 'true',
-    jiraToken: getInput('jira-token', { required: false }),
-    jiraAccount: getInput('jira-account', { required: false }),
-    jiraEndpoint: getInput('jira-endpoint', { required: false }),
-    jiraMoveIssueFrom: getInput('jira-move-issue-from', { required: false }),
-    jiraMoveTransitionName: getInput('jira-move-transition-name', { required: false }),
   };
 }
 
@@ -201,7 +233,7 @@ export async function fetchConfig(): Promise<Config> {
   return validateConfig(parsedConfig);
 }
 
-export async function fetchChangedFiles({ pr }: { pr: PullRequest }): Promise<string[]> {
+export async function fetchChangedFiles({ pr }: { pr: IPullRequest }): Promise<string[]> {
   const octokit = getMyOctokit();
 
   const changedFiles: string[] = [];
@@ -229,7 +261,7 @@ export async function fetchChangedFiles({ pr }: { pr: PullRequest }): Promise<st
 }
 
 export async function assignReviewers(
-  pr: PullRequest,
+  pr: IPullRequest,
   reviewers: string[],
 ): Promise<void> {
   const octokit = getMyOctokit();
@@ -291,7 +323,7 @@ export async function getExistingCommentId(
   return found?.id;
 }
 
-export async function getLatestCommitDate(pr: PullRequest): Promise<{
+export async function getLatestCommitDate(pr: IPullRequest): Promise<{
   latestCommitDate: Date;
   authoredDateString: string;
 }> {
@@ -369,7 +401,7 @@ export async function createComment({
   comment,
   pr,
 }: {
-  pr: PullRequest;
+  pr: IPullRequest;
   comment: string;
 }): Promise<RestEndpointMethodTypes['issues']['createComment']['response']['data']> {
   const octokit = getMyOctokit();
@@ -414,7 +446,7 @@ export function doesContainIgnoreMergeLabels(labels: string[]): boolean {
 }
 
 export async function mergePullRequest(
-  pr: PullRequest,
+  pr: IPullRequest,
 ): Promise<RestEndpointMethodTypes['pulls']['merge']['response']['data'] | null> {
   const octokit = getMyOctokit();
   const inputs = getInputs();

@@ -1,4 +1,4 @@
-import * as core from '@actions/core';
+import { getInput, setOutput } from '@actions/core';
 import { version } from '../../package.json';
 import * as github from '../github';
 import { info, error, warning, debug } from '../logger';
@@ -10,7 +10,22 @@ export async function run(): Promise<void> {
   try {
     info(`Staring PR auto merge version ${version}.`);
 
-    const inputs = github.getInputs();
+    const [owner, repo] = getInput('repository').split('/');
+    const inputs = {
+      owner,
+      repo,
+      pullRequestNumber: Number(getInput('pullRequestNumber', { required: true })),
+      comment: getInput('comment'),
+      shouldChangeJiraIssueStatus:
+        getInput('should-change-jira-issue-status', {
+          required: true,
+        }) === 'true',
+      jiraToken: getInput('jira-token', { required: true }),
+      jiraAccount: getInput('jira-account', { required: true }),
+      jiraEndpoint: getInput('jira-endpoint', { required: true }),
+      jiraMoveIssueFrom: getInput('jira-move-issue-from', { required: true }),
+      jiraMoveTransitionName: getInput('jira-move-transition-name', { required: true }),
+    };
 
     let config;
 
@@ -28,7 +43,11 @@ export async function run(): Promise<void> {
       throw err;
     }
 
-    const pr = github.getPullRequest();
+    const pr = await github.getPullRequest({
+      name: inputs.repo,
+      owner: inputs.owner,
+      pullNumber: inputs.pullRequestNumber,
+    });
 
     const prValidationError = github.validatePullRequest(pr);
 
@@ -93,7 +112,7 @@ export async function run(): Promise<void> {
       }
     }
 
-    core.setOutput('merged', true);
+    setOutput('merged', true);
   } catch (err) {
     error(err as Error);
   }
