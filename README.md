@@ -351,7 +351,6 @@ jobs:
           jira-account: ${{ secrets.JIRA_ACCOUNT }}
           jira-endpoint: https://example.atlassian.net
           jira-move-issue-from: Code Review
-          jira-move-issue-to: Ready For QA
 ```
 
 <a name='sage'></a>
@@ -416,7 +415,9 @@ For local development you can use [act](https://github.com/nektos/act) tool.
 
 ```bash
 act -s GITHUB_TOKEN=yourtoken
+act <workflow name> -s SECRET_NAME=SECRET_VALUE --input INPUT_NAME=INPUT_VALUE
 ```
+Example: `act workflow_dispatch -s GITHUB_TOKEN=<token> --input sha=<commit hash>`. It will trigger workflows which have `on: workflow_dispatch` parameter
 
 ### Commands
 

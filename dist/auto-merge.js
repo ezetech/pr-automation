@@ -35024,7 +35024,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(2186);
 ;// CONCATENATED MODULE: ./package.json
-const package_namespaceObject = {"i8":"0.8.0"};
+const package_namespaceObject = {"i8":"0.9.0"};
 // EXTERNAL MODULE: ./node_modules/yaml/dist/index.js
 var dist = __nccwpck_require__(4083);
 // EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js

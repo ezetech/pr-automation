@@ -55,9 +55,9 @@ inputs:
   jira-move-issue-from:
     required: false
     description: 'Move Issue From'
-  jira-move-issue-to:
+  jira-move-transition-name:
     required: false
-    description: 'Move Issue To'
+    description: 'Jira move transition name'
 
 runs:
   using: 'node16'
