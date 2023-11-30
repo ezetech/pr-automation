@@ -35137,6 +35137,9 @@ function getPullRequest({ name, owner, pullNumber, }) {
         const pr = github.context.payload.pull_request;
         // @todo validate PR data
         if (!pr) {
+            if (!pullNumber && !name && !owner) {
+                throw new Error('No pull_request data in context.payload');
+            }
             const octokit = getMyOctokit();
             try {
                 const pullRequest = yield octokit.graphql(`

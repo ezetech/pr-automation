@@ -35137,6 +35137,9 @@ function getPullRequest({ name, owner, pullNumber, }) {
         const pr = github.context.payload.pull_request;
         // @todo validate PR data
         if (!pr) {
+            if (!pullNumber && !name && !owner) {
+                throw new Error('No pull_request data in context.payload');
+            }
             const octokit = getMyOctokit();
             try {
                 const pullRequest = yield octokit.graphql(`
@@ -35888,14 +35891,10 @@ function run() {
     return auto_assign_awaiter(this, void 0, void 0, function* () {
         try {
             info(`Starting pr auto assign version ${package_namespaceObject.i8}`);
-            const [owner, repo] = (0,core.getInput)('repository').split('/');
             const inputs = {
-                owner,
-                repo,
                 checkReviewerOnSage: (0,core.getInput)('check-reviewer-on-sage', { required: false }) === 'true',
                 sageUrl: (0,core.getInput)('sage-url', { required: false }),
                 sageToken: (0,core.getInput)('sage-token', { required: false }),
-                pullRequestNumber: Number((0,core.getInput)('pullRequestNumber', { required: true })),
             };
             let config;
             debug('fetching config');
@@ -35910,11 +35909,7 @@ function run() {
                 }
                 throw err;
             }
-            const pr = yield getPullRequest({
-                name: inputs.repo,
-                owner: inputs.owner,
-                pullNumber: inputs.pullRequestNumber,
-            });
+            const pr = yield getPullRequest({});
             const { isDraft, author } = pr;
             const latestSha = getLatestSha();
             let commitData;

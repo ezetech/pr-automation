@@ -17,15 +17,11 @@ export async function run(): Promise<void> {
   try {
     info(`Starting pr auto assign version ${version}`);
 
-    const [owner, repo] = getInput('repository').split('/');
     const inputs = {
-      owner,
-      repo,
       checkReviewerOnSage:
         getInput('check-reviewer-on-sage', { required: false }) === 'true',
       sageUrl: getInput('sage-url', { required: false }),
       sageToken: getInput('sage-token', { required: false }),
-      pullRequestNumber: Number(getInput('pullRequestNumber', { required: true })),
     };
 
     let config;
@@ -43,11 +39,7 @@ export async function run(): Promise<void> {
       }
       throw err;
     }
-    const pr = await github.getPullRequest({
-      name: inputs.repo,
-      owner: inputs.owner,
-      pullNumber: inputs.pullRequestNumber,
-    });
+    const pr = await github.getPullRequest({});
     const { isDraft, author } = pr;
 
     const latestSha = github.getLatestSha();

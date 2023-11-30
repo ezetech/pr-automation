@@ -52,13 +52,16 @@ export async function getPullRequest({
   owner,
   pullNumber,
 }: {
-  name: string;
-  owner: string;
-  pullNumber: number;
+  name?: string;
+  owner?: string;
+  pullNumber?: number;
 }): Promise<IPullRequest> {
   const pr = context.payload.pull_request;
   // @todo validate PR data
   if (!pr) {
+    if (!pullNumber && !name && !owner) {
+      throw new Error('No pull_request data in context.payload');
+    }
     const octokit = getMyOctokit();
     try {
       const pullRequest = await octokit.graphql<IPullRequestGraphQL>(
