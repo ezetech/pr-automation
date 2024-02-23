@@ -1,8 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es2015",
-    "lib": ["es2021"],
-    "jsx": "react",
+    "module": "CommonJS",
+    "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
     "moduleResolution": "node",
     "skipLibCheck": true,
     "resolveJsonModule": true,

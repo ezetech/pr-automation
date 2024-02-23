@@ -26,7 +26,6 @@ export type Config = {
   defaultRules?: DefaultRules;
   rulesByCreator: Record<string, Rule[]>;
   options?: Options;
-  postReviewOptions?: {};
   sageUsers?: Record<string, { email: string }[]>;
 };
 

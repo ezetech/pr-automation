@@ -1,6 +1,7 @@
-import { Config, DefaultRules, Rule } from '../config/typings';
+import { Config, Rule } from '../config/typings';
 
 type ArrayOfItems = { list: string[]; required: number }[];
+
 function formatMessage(arr: ArrayOfItems): string {
   if (!arr.length) {
     return '';
@@ -19,6 +20,7 @@ function sortRules(rules: Rule[]): Rule[] {
     return a.reviewers.length - b.reviewers.length;
   });
 }
+
 export function getMessage({
   fileChangesGroups,
   createdBy,
@@ -34,16 +36,16 @@ export function getMessage({
 }): string {
   const arr: ArrayOfItems = [];
   const used = new Set<string>();
-  const rules = rulesByCreator[createdBy];
-  if (!rules) {
+  const rulesByCurrentCreator = rulesByCreator[createdBy];
+  if (!rulesByCurrentCreator) {
     if (defaultRules) {
       const rulesByFileGroup = defaultRules.byFileGroups;
       fileChangesGroups.forEach((fileGroup) => {
-        const rules = rulesByFileGroup[fileGroup];
-        if (!rules) {
+        const rulesByCurrentFileGroup = rulesByFileGroup[fileGroup];
+        if (!rulesByCurrentFileGroup) {
           return;
         }
-        sortRules(rules).forEach((rule) => {
+        sortRules(rulesByCurrentFileGroup).forEach((rule) => {
           const toAdd = rule.reviewers.reduce<string[]>((result, reviewer) => {
             if (!used.has(reviewer)) {
               used.add(reviewer);
@@ -66,7 +68,7 @@ export function getMessage({
     );
 
     fileChangesGroups.forEach((fileGroup) => {
-      sortRules(rules).forEach((rule) => {
+      sortRules(rulesByCurrentCreator).forEach((rule) => {
         if (rule.ifChanged) {
           const matchFileChanges = rule.ifChanged.some((group) =>
             Boolean(fileChangesGroupsMap[group]),
