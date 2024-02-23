@@ -1,13 +1,7 @@
-import { Config } from '../config/typings';
-import { getMessage } from './get-message';
 import { expect } from 'chai';
+import { getMessage } from './get-message';
 
 describe('should get message: ', () => {
-  const fileChangesGroups: Config['fileChangesGroups'] = {
-    ['file-group-1']: ['src/group1/**/*', 'src/test/group1/**/*'],
-    ['file-group-2']: ['src/group2/**/*', 'src/test/group2/**/*'],
-    ['file-group-common']: ['src/common/**/*', 'config.ts', 'src/specific/tsconfig.json'],
-  };
   it('should get readable message about rules (1)', (done) => {
     const result = getMessage({
       createdBy: 'Bob',
@@ -61,7 +55,7 @@ describe('should get message: ', () => {
       fileChangesGroups: ['file-group-2'],
     });
     expect(result).to.deep.equal(
-      `- Calvin (1 required out of 1)\n- Vinny, Hank (2 required out of 2)`,
+      '- Calvin (1 required out of 1)\n- Vinny, Hank (2 required out of 2)',
     );
     done();
   });
@@ -91,7 +85,7 @@ describe('should get message: ', () => {
       fileChangesGroups: ['file-group-2'],
     });
     expect(result).to.deep.equal(
-      `- Calvin (1 required out of 1)\n- Vinny, Hank (2 required out of 2)`,
+      '- Calvin (1 required out of 1)\n- Vinny, Hank (2 required out of 2)',
     );
     done();
   });
@@ -126,7 +120,7 @@ describe('should get message: ', () => {
       fileChangesGroups: ['file-group-2'],
     });
     expect(result).to.deep.equal(
-      `- Calvin (1 required out of 1)\n- Vinny (1 required out of 1)\n- Hank (1 required out of 1)`,
+      '- Calvin (1 required out of 1)\n- Vinny (1 required out of 1)\n- Hank (1 required out of 1)',
     );
     done();
   });

@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { Reviews, State, ReviewerByState } from '../config/typings';
+import { Reviews, State } from '../config/typings';
 
 import {
   getReviewersLastReviews,

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { getIssueIdFromBranchName, getTransitionId } from './';
 import { JiraTransitions } from '../config/typings';
+import { getIssueIdFromBranchName, getTransitionId } from './';
 
 describe('Should test getIssueIdFromBranchName:', () => {
   it('Should return null if branch name is empty', () => {

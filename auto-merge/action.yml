@@ -60,5 +60,5 @@ inputs:
     description: 'Jira move transition name'
 
 runs:
-  using: 'node16'
+  using: 'node20'
   main: '../dist/auto-merge.js'
