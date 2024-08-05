@@ -17,7 +17,7 @@ const schema = Joi.object<Config>()
         Joi.string(),
         Joi.array().items(
           Joi.object({
-            reviewers: Joi.array().items(Joi.string()).required(),
+            reviewers: Joi.array().items(Joi.string().trim().lowercase()).required(),
             required: Joi.number().required(),
             assign: Joi.number().optional(),
           }),
@@ -29,7 +29,7 @@ const schema = Joi.object<Config>()
         Joi.string(),
         Joi.array().items(
           Joi.object({
-            reviewers: Joi.array().items(Joi.string()).required(),
+            reviewers: Joi.array().items(Joi.string().trim().lowercase()).required(),
             required: Joi.number().required(),
             assign: Joi.number().optional(),
             ifChanged: Joi.array().items(Joi.string()).optional(),
@@ -59,6 +59,21 @@ export function validateConfig(configJson: Record<string, unknown>): Config {
   if (error) {
     throw new Error(JSON.stringify(error.details));
   }
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  return value!;
+  const result: Config = value!;
+  Object.keys(result).forEach((key) => {
+    if (key === 'sageUsers' || key === 'rulesByCreator') {
+      if (!result[key]) {
+        return null;
+      }
+      Object.keys(result[key]).forEach((userNameKey) => {
+        if (!result[key] || !result[key][userNameKey]) {
+          return null;
+        }
+        const newUserNameKey = userNameKey.trim().toLowerCase();
+        result[key][newUserNameKey] = result[key][userNameKey];
+        delete result[key][userNameKey];
+      });
+    }
+  });
+  return result;
 }

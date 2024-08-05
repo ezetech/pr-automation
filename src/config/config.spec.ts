@@ -72,4 +72,77 @@ describe('should validate config ', () => {
       done((err as Error).message);
     }
   });
+  it('should lowercase & trim reviewers', (done) => {
+    try {
+      const params = {
+        options: {
+          ignoreReassignForMergeFrom: 'main',
+        },
+        defaultRules: {
+          byFileGroups: {
+            'file-group-1': [
+              {
+                reviewers: ['CalvinCalvin', 'Quade', ' BobG '],
+                required: 1,
+                assign: 1,
+              },
+            ],
+          },
+        },
+        rulesByCreator: {
+          Alfred: [{ reviewers: ['CalvinCalvin', ' BobG '], required: 1, assign: 1 }],
+        },
+        fileChangesGroups: {},
+        sageUsers: {
+          CalvinCalvin: [
+            {
+              email: 'calvin@email.com',
+            },
+          ],
+          ' BobG ': [
+            {
+              email: 'bobg@email.com',
+            },
+          ],
+        },
+      };
+      const result = validateConfig(params);
+      console.log({ result: JSON.stringify(result) });
+      expect(result).to.deep.equal({
+        options: {
+          ignoreReassignForMergeFrom: 'main',
+        },
+        defaultRules: {
+          byFileGroups: {
+            'file-group-1': [
+              {
+                reviewers: ['calvincalvin', 'quade', 'bobg'],
+                required: 1,
+                assign: 1,
+              },
+            ],
+          },
+        },
+        rulesByCreator: {
+          alfred: [{ reviewers: ['calvincalvin', 'bobg'], required: 1, assign: 1 }],
+        },
+        fileChangesGroups: {},
+        sageUsers: {
+          calvincalvin: [
+            {
+              email: 'calvin@email.com',
+            },
+          ],
+          bobg: [
+            {
+              email: 'bobg@email.com',
+            },
+          ],
+        },
+      });
+      done();
+    } catch (err: unknown) {
+      done((err as Error).message);
+    }
+  });
 });
