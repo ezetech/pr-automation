@@ -28420,14 +28420,14 @@ const schema = Joi.object()
     }).optional(),
     defaultRules: Joi.object({
         byFileGroups: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.object({
-            reviewers: Joi.array().items(Joi.string().trim().lowercase()).required(),
+            reviewers: Joi.array().items(Joi.string()).required(),
             required: Joi.number().required(),
             assign: Joi.number().optional(),
         }))),
     }).optional(),
     rulesByCreator: Joi.object()
         .pattern(Joi.string(), Joi.array().items(Joi.object({
-        reviewers: Joi.array().items(Joi.string().trim().lowercase()).required(),
+        reviewers: Joi.array().items(Joi.string()).required(),
         required: Joi.number().required(),
         assign: Joi.number().optional(),
         ifChanged: Joi.array().items(Joi.string()).optional(),
@@ -28449,23 +28449,8 @@ function validateConfig(configJson) {
     if (error) {
         throw new Error(JSON.stringify(error.details));
     }
-    const result = value;
-    Object.keys(result).forEach((key) => {
-        if (key === 'sageUsers' || key === 'rulesByCreator') {
-            if (!result[key]) {
-                return null;
-            }
-            Object.keys(result[key]).forEach((userNameKey) => {
-                if (!result[key] || !result[key][userNameKey]) {
-                    return null;
-                }
-                const newUserNameKey = userNameKey.trim().toLowerCase();
-                result[key][newUserNameKey] = result[key][userNameKey];
-                delete result[key][userNameKey];
-            });
-        }
-    });
-    return result;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return value;
 }
 
 
@@ -37845,7 +37830,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"pr-automation","version":"1.1.0","description":"GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.","scripts":{"build:auto-assign":"ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js","build:auto-merge":"ncc build ./src/actions/auto-merge.ts -o dist && mv ./dist/index.js ./dist/auto-merge.js","build":"npm run build:auto-assign && npm run build:auto-merge","test":"tsc --noEmit && NODE_ENV=test mocha","lint":"eslint -f unix \\"src/**/*.@(ts|tsx)\\"","lint:fix":"eslint --fix -f unix \\"src/**/*.@(ts|tsx)\\"","prepare":"husky install"},"type":"commonjs","husky":{"hooks":{"pre-commit":"npm run lint && npm run test"}},"keywords":[],"license":"MIT","dependencies":{"@actions/core":"1.10.1","@actions/github":"^4.0.0","@octokit/types":"^5.5.0","@octokit/webhooks":"^7.21.0","joi":"17.12.2","minimatch":"^5.1.0","node-fetch":"2.6.13","node-notifier":">=8.0.1","yaml":"2.3.4"},"devDependencies":{"@ezetech/eslint-config":"3.2.0","@types/chai":"4.3.11","@types/minimatch":"3.0.5","@types/mocha":"^10.0.6","@types/node":"20.11.20","@types/node-fetch":"2.6.11","@typescript-eslint/eslint-plugin":"6.9.1","@typescript-eslint/parser":"6.9.1","@vercel/ncc":"^0.36.1","chai":"4.4.1","eslint":"8.52.0","eslint-config-prettier":"8.5.0","eslint-plugin-filenames-simple":"^0.8.0","eslint-plugin-import":"2.26.0","eslint-plugin-jsx-a11y":"6.5.1","eslint-plugin-more":"1.0.5","eslint-plugin-no-null":"1.0.2","eslint-plugin-no-only-tests":"2.6.0","eslint-plugin-prettier":"5.0.1","eslint-plugin-react":"7.30.1","eslint-plugin-security":"1.5.0","eslint-plugin-spellcheck":"^0.0.20","husky":"9.0.11","mocha":"10.3.0","prettier":"3.2.5","ts-node":"10.9.2","typescript":"5.5.4"}}');
+module.exports = JSON.parse('{"name":"pr-automation","version":"1.2.0","description":"GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.","scripts":{"build:auto-assign":"ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js","build:auto-merge":"ncc build ./src/actions/auto-merge.ts -o dist && mv ./dist/index.js ./dist/auto-merge.js","build":"npm run build:auto-assign && npm run build:auto-merge","test":"tsc --noEmit && NODE_ENV=test mocha","lint":"eslint -f unix \\"src/**/*.@(ts|tsx)\\"","lint:fix":"eslint --fix -f unix \\"src/**/*.@(ts|tsx)\\"","prepare":"husky install"},"type":"commonjs","husky":{"hooks":{"pre-commit":"npm run lint && npm run test"}},"keywords":[],"license":"MIT","dependencies":{"@actions/core":"1.10.1","@actions/github":"^4.0.0","@octokit/types":"^5.5.0","@octokit/webhooks":"^7.21.0","joi":"17.12.2","minimatch":"^5.1.0","node-fetch":"2.6.13","node-notifier":">=8.0.1","yaml":"2.3.4"},"devDependencies":{"@ezetech/eslint-config":"3.2.0","@types/chai":"4.3.11","@types/minimatch":"3.0.5","@types/mocha":"^10.0.6","@types/node":"20.11.20","@types/node-fetch":"2.6.11","@typescript-eslint/eslint-plugin":"6.9.1","@typescript-eslint/parser":"6.9.1","@vercel/ncc":"^0.36.1","chai":"4.4.1","eslint":"8.52.0","eslint-config-prettier":"8.5.0","eslint-plugin-filenames-simple":"^0.8.0","eslint-plugin-import":"2.26.0","eslint-plugin-jsx-a11y":"6.5.1","eslint-plugin-more":"1.0.5","eslint-plugin-no-null":"1.0.2","eslint-plugin-no-only-tests":"2.6.0","eslint-plugin-prettier":"5.0.1","eslint-plugin-react":"7.30.1","eslint-plugin-security":"1.5.0","eslint-plugin-spellcheck":"^0.0.20","husky":"9.0.11","mocha":"10.3.0","prettier":"3.2.5","ts-node":"10.9.2","typescript":"5.5.4"}}');
 
 /***/ })
 
