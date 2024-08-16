@@ -28405,7 +28405,7 @@ function wrappy (fn, cb) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRulesThatHaveAtLeastOneApprover = getRulesThatHaveAtLeastOneApprover;
+exports.getRulesThatHaveAtLeastOneApprover = void 0;
 function getRulesThatHaveAtLeastOneApprover({ rules, requestedReviewerLogins, }) {
     return rules.reduce((result, rule) => {
         const someApproverFromRuleAssigned = rule.reviewers.some((reviewerFromRule) => requestedReviewerLogins.includes(reviewerFromRule));
@@ -28415,6 +28415,7 @@ function getRulesThatHaveAtLeastOneApprover({ rules, requestedReviewerLogins, })
         return result;
     }, []);
 }
+exports.getRulesThatHaveAtLeastOneApprover = getRulesThatHaveAtLeastOneApprover;
 
 
 /***/ }),
@@ -28425,7 +28426,7 @@ function getRulesThatHaveAtLeastOneApprover({ rules, requestedReviewerLogins, })
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.identifyReviewers = identifyReviewers;
+exports.identifyReviewers = void 0;
 const logger_1 = __nccwpck_require__(4636);
 function getReviewers({ reviewers, createdBy, }) {
     const result = new Set();
@@ -28499,6 +28500,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
     });
     return [...result];
 }
+exports.identifyReviewers = identifyReviewers;
 
 
 /***/ }),
@@ -28509,7 +28511,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.areCIChecksPassed = areCIChecksPassed;
+exports.areCIChecksPassed = void 0;
 function areCIChecksPassed({ checks, requiredChecks, }) {
     if (requiredChecks === undefined) {
         return true;
@@ -28528,6 +28530,7 @@ function areCIChecksPassed({ checks, requiredChecks, }) {
     }
     return true;
 }
+exports.areCIChecksPassed = areCIChecksPassed;
 
 
 /***/ }),
@@ -28538,9 +28541,7 @@ function areCIChecksPassed({ checks, requiredChecks, }) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getReviewersLastReviews = getReviewersLastReviews;
-exports.filterReviewersByState = filterReviewersByState;
-exports.checkReviewersRequiredChanges = checkReviewersRequiredChanges;
+exports.checkReviewersRequiredChanges = exports.filterReviewersByState = exports.getReviewersLastReviews = void 0;
 const index_1 = __nccwpck_require__(3495);
 function getReviewersLastReviews(listReviews) {
     const response = {};
@@ -28564,6 +28565,7 @@ function getReviewersLastReviews(listReviews) {
     });
     return Object.values(response).slice().reverse();
 }
+exports.getReviewersLastReviews = getReviewersLastReviews;
 function filterReviewersByState(reviewersFullData) {
     const response = {
         requiredChanges: [],
@@ -28589,6 +28591,7 @@ function filterReviewersByState(reviewersFullData) {
     });
     return response;
 }
+exports.filterReviewersByState = filterReviewersByState;
 /**
  * skipRuleThatHaveNoAssignedReviewers.
  * will skip rule groups that are not assigned completely for some reason.
@@ -28628,6 +28631,7 @@ function checkReviewersRequiredChanges({ reviews, rules, requestedReviewerLogins
     }
     return true;
 }
+exports.checkReviewersRequiredChanges = checkReviewersRequiredChanges;
 
 
 /***/ }),
@@ -28662,7 +28666,7 @@ exports.getRulesThatHaveAtLeastOneApprover = (0, utils_1.withDebugLog)(get_rules
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isPrFullyApproved = isPrFullyApproved;
+exports.isPrFullyApproved = void 0;
 const _1 = __nccwpck_require__(3495);
 function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedReviewerLogins, currentPendingReviewers, }) {
     const checkCIChecks = (0, _1.areCIChecksPassed)({ checks, requiredChecks });
@@ -28680,6 +28684,7 @@ function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedRe
     }
     return true;
 }
+exports.isPrFullyApproved = isPrFullyApproved;
 
 
 /***/ }),
@@ -28690,7 +28695,7 @@ function isPrFullyApproved({ rules, requiredChecks, checks, reviews, requestedRe
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.validateConfig = validateConfig;
+exports.validateConfig = void 0;
 const Joi = __nccwpck_require__(918);
 const schema = Joi.object()
     .keys({
@@ -28705,14 +28710,14 @@ const schema = Joi.object()
     }).optional(),
     defaultRules: Joi.object({
         byFileGroups: Joi.object().pattern(Joi.string(), Joi.array().items(Joi.object({
-            reviewers: Joi.array().items(Joi.string().trim().lowercase()).required(),
+            reviewers: Joi.array().items(Joi.string()).required(),
             required: Joi.number().required(),
             assign: Joi.number().optional(),
         }))),
     }).optional(),
     rulesByCreator: Joi.object()
         .pattern(Joi.string(), Joi.array().items(Joi.object({
-        reviewers: Joi.array().items(Joi.string().trim().lowercase()).required(),
+        reviewers: Joi.array().items(Joi.string()).required(),
         required: Joi.number().required(),
         assign: Joi.number().optional(),
         ifChanged: Joi.array().items(Joi.string()).optional(),
@@ -28734,24 +28739,10 @@ function validateConfig(configJson) {
     if (error) {
         throw new Error(JSON.stringify(error.details));
     }
-    const result = value;
-    Object.keys(result).forEach((key) => {
-        if (key === 'sageUsers' || key === 'rulesByCreator') {
-            if (!result[key]) {
-                return null;
-            }
-            Object.keys(result[key]).forEach((userNameKey) => {
-                if (!result[key] || !result[key][userNameKey]) {
-                    return null;
-                }
-                const newUserNameKey = userNameKey.trim().toLowerCase();
-                result[key][newUserNameKey] = result[key][userNameKey];
-                delete result[key][userNameKey];
-            });
-        }
-    });
-    return result;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    return value;
 }
+exports.validateConfig = validateConfig;
 
 
 /***/ }),
@@ -28762,22 +28753,7 @@ function validateConfig(configJson) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getPullRequest = getPullRequest;
-exports.fetchPullRequestReviewers = fetchPullRequestReviewers;
-exports.validatePullRequest = validatePullRequest;
-exports.fetchConfig = fetchConfig;
-exports.fetchChangedFiles = fetchChangedFiles;
-exports.assignReviewers = assignReviewers;
-exports.updateComment = updateComment;
-exports.getExistingCommentId = getExistingCommentId;
-exports.getLatestCommitDate = getLatestCommitDate;
-exports.getReviews = getReviews;
-exports.getCIChecks = getCIChecks;
-exports.createComment = createComment;
-exports.doesContainIgnoreMergeLabels = doesContainIgnoreMergeLabels;
-exports.mergePullRequest = mergePullRequest;
-exports.getLatestSha = getLatestSha;
-exports.getCommitData = getCommitData;
+exports.getCommitData = exports.getLatestSha = exports.mergePullRequest = exports.doesContainIgnoreMergeLabels = exports.createComment = exports.getCIChecks = exports.getReviews = exports.getLatestCommitDate = exports.getExistingCommentId = exports.updateComment = exports.assignReviewers = exports.fetchChangedFiles = exports.fetchConfig = exports.validatePullRequest = exports.fetchPullRequestReviewers = exports.getPullRequest = void 0;
 const yaml = __nccwpck_require__(4083);
 const github_1 = __nccwpck_require__(5438);
 const core_1 = __nccwpck_require__(2186);
@@ -28853,6 +28829,7 @@ async function getPullRequest({ name, owner, pullNumber, }) {
     (0, logger_1.debug)(`PR event payload: ${JSON.stringify(pr)}`);
     return transformPullRequestFromContext(pr);
 }
+exports.getPullRequest = getPullRequest;
 async function fetchListRequestedReviewers({ pr, }) {
     const octokit = getMyOctokit();
     const response = await octokit.rest.pulls.listRequestedReviewers({
@@ -28910,6 +28887,7 @@ async function fetchPullRequestReviewers({ pr }) {
         currentPendingReviewers: arr1,
     };
 }
+exports.fetchPullRequestReviewers = fetchPullRequestReviewers;
 function validatePullRequest(pr) {
     if (pr.isDraft) {
         return `Pull request #${pr.number} is a draft`;
@@ -28922,6 +28900,7 @@ function validatePullRequest(pr) {
     }
     return null;
 }
+exports.validatePullRequest = validatePullRequest;
 function getInputs() {
     const [owner, repo] = (0, core_1.getInput)('repository').split('/');
     return {
@@ -28958,6 +28937,7 @@ async function fetchConfig() {
     const parsedConfig = yaml.parse(content);
     return (0, config_1.validateConfig)(parsedConfig);
 }
+exports.fetchConfig = fetchConfig;
 async function fetchChangedFiles({ pr }) {
     const octokit = getMyOctokit();
     const changedFiles = [];
@@ -28978,6 +28958,7 @@ async function fetchChangedFiles({ pr }) {
     } while (numberOfFilesInCurrentPage === perPage);
     return changedFiles;
 }
+exports.fetchChangedFiles = fetchChangedFiles;
 async function assignReviewers(pr, reviewers) {
     const octokit = getMyOctokit();
     await octokit.rest.pulls.requestReviewers({
@@ -28988,6 +28969,7 @@ async function assignReviewers(pr, reviewers) {
     });
     return;
 }
+exports.assignReviewers = assignReviewers;
 async function updateComment(existingCommentId, body) {
     const octokit = getMyOctokit();
     const updatedComment = await octokit.rest.issues.updateComment({
@@ -28998,6 +28980,7 @@ async function updateComment(existingCommentId, body) {
     });
     return updatedComment.data;
 }
+exports.updateComment = updateComment;
 async function getExistingCommentId(issueNumber, messageId) {
     const octokit = getMyOctokit();
     const parameters = {
@@ -29018,6 +29001,7 @@ async function getExistingCommentId(issueNumber, messageId) {
     }
     return found?.id;
 }
+exports.getExistingCommentId = getExistingCommentId;
 async function getLatestCommitDate(pr) {
     const octokit = getMyOctokit();
     try {
@@ -29053,6 +29037,7 @@ async function getLatestCommitDate(pr) {
         throw err;
     }
 }
+exports.getLatestCommitDate = getLatestCommitDate;
 async function getReviews() {
     const octokit = getMyOctokit();
     const inputs = getInputs();
@@ -29066,6 +29051,7 @@ async function getReviews() {
     }
     return response.data;
 }
+exports.getReviews = getReviews;
 async function getCIChecks() {
     const octokit = getMyOctokit();
     const inputs = getInputs();
@@ -29079,6 +29065,7 @@ async function getCIChecks() {
     }
     return response.data;
 }
+exports.getCIChecks = getCIChecks;
 async function createComment({ comment, pr, }) {
     const octokit = getMyOctokit();
     let owner = github_1.context.repo.owner;
@@ -29101,6 +29088,7 @@ async function createComment({ comment, pr, }) {
     }
     return response.data;
 }
+exports.createComment = createComment;
 function doesContainIgnoreMergeLabels(labels) {
     const inputs = getInputs();
     const doNotMergeLabelsList = inputs.doNotMergeLabels.split(',');
@@ -29112,6 +29100,7 @@ function doesContainIgnoreMergeLabels(labels) {
     }
     return false;
 }
+exports.doesContainIgnoreMergeLabels = doesContainIgnoreMergeLabels;
 async function mergePullRequest(pr) {
     const octokit = getMyOctokit();
     const inputs = getInputs();
@@ -29130,9 +29119,11 @@ async function mergePullRequest(pr) {
     }
     return response.data;
 }
+exports.mergePullRequest = mergePullRequest;
 function getLatestSha() {
     return github_1.context.payload.after;
 }
+exports.getLatestSha = getLatestSha;
 async function getCommitData(sha) {
     const octokit = getMyOctokit();
     (0, logger_1.debug)(`Fetching commit data of sha ${sha}`);
@@ -29153,6 +29144,7 @@ async function getCommitData(sha) {
         parents,
     };
 }
+exports.getCommitData = getCommitData;
 
 
 /***/ }),
@@ -29163,7 +29155,7 @@ async function getCommitData(sha) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.changeJiraIssueStatus = changeJiraIssueStatus;
+exports.changeJiraIssueStatus = void 0;
 const _1 = __nccwpck_require__(9273);
 async function changeJiraIssueStatus({ branchName, inputs, }) {
     const issueId = (0, _1.getIssueIdFromBranchName)(branchName);
@@ -29220,6 +29212,7 @@ async function changeJiraIssueStatus({ branchName, inputs, }) {
         message: 'Jira issue status is updated',
     };
 }
+exports.changeJiraIssueStatus = changeJiraIssueStatus;
 
 
 /***/ }),
@@ -29248,9 +29241,7 @@ exports.getTransitionId = (0, utils_1.withDebugLog)(jira_1.getTransitionId);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getIssueIdFromBranchName = getIssueIdFromBranchName;
-exports.getTransitionId = getTransitionId;
-exports.jiraClient = jiraClient;
+exports.jiraClient = exports.getTransitionId = exports.getIssueIdFromBranchName = void 0;
 const node_fetch_1 = __nccwpck_require__(467);
 function getIssueIdFromBranchName(branch) {
     const split = branch.split('-');
@@ -29265,6 +29256,7 @@ function getIssueIdFromBranchName(branch) {
     }
     return `${split[0]}-${split[1]}`;
 }
+exports.getIssueIdFromBranchName = getIssueIdFromBranchName;
 function getTransitionId({ transitions, transitionName, }) {
     const transition = transitions.find((t) => t.name.toLowerCase() === transitionName.toLowerCase());
     if (!transition) {
@@ -29272,6 +29264,7 @@ function getTransitionId({ transitions, transitionName, }) {
     }
     return transition.id;
 }
+exports.getTransitionId = getTransitionId;
 function jiraClient({ jiraAccount, jiraToken, }) {
     const token = Buffer.from(`${jiraAccount}:${jiraToken}`).toString('base64');
     const options = {
@@ -29295,6 +29288,7 @@ function jiraClient({ jiraAccount, jiraToken, }) {
         }
     };
 }
+exports.jiraClient = jiraClient;
 
 
 /***/ }),
@@ -29322,7 +29316,7 @@ exports.warning = isTest ? () => { } : core_1.warning;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getMessage = getMessage;
+exports.getMessage = void 0;
 function formatMessage(arr) {
     if (!arr.length) {
         return '';
@@ -29393,6 +29387,7 @@ function getMessage({ fileChangesGroups, createdBy, rulesByCreator, defaultRules
         item.list.some((approver) => reviewersToAssign.includes(approver)));
     return formatMessage(result);
 }
+exports.getMessage = getMessage;
 
 
 /***/ }),
@@ -29421,9 +29416,7 @@ exports.getMessage = (0, utils_1.withDebugLog)(get_message_1.getMessage);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.shouldRequestReview = shouldRequestReview;
-exports.identifyReviewers = identifyReviewers;
-exports.identifyFileChangeGroups = identifyFileChangeGroups;
+exports.identifyFileChangeGroups = exports.identifyReviewers = exports.shouldRequestReview = void 0;
 const minimatch = __nccwpck_require__(3973);
 const logger_1 = __nccwpck_require__(4636);
 const utils_1 = __nccwpck_require__(1314);
@@ -29473,6 +29466,7 @@ function shouldRequestReview({ isDraft, options, commitData, currentLabels, }) {
     }
     return true;
 }
+exports.shouldRequestReview = shouldRequestReview;
 function getReviewersBasedOnRule({ assign, reviewers, createdBy, requestedReviewerLogins, absentReviewersLogins, }) {
     const result = new Set();
     const availableReviewers = reviewers.filter((reviewer) => {
@@ -29569,6 +29563,7 @@ function identifyReviewers({ createdBy, rulesByCreator, fileChangesGroups, defau
     });
     return [...result];
 }
+exports.identifyReviewers = identifyReviewers;
 function identifyFileChangeGroups({ fileChangesGroups, changedFiles, }) {
     const set = new Set();
     changedFiles.forEach((changedFile) => {
@@ -29583,6 +29578,7 @@ function identifyFileChangeGroups({ fileChangesGroups, changedFiles, }) {
     });
     return [...set];
 }
+exports.identifyFileChangeGroups = identifyFileChangeGroups;
 
 
 /***/ }),
@@ -29593,13 +29589,12 @@ function identifyFileChangeGroups({ fileChangesGroups, changedFiles, }) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRandomItemFromArray = getRandomItemFromArray;
-exports.withDebugLog = withDebugLog;
-exports.convertSageEmailsToUsernames = convertSageEmailsToUsernames;
+exports.convertSageEmailsToUsernames = exports.withDebugLog = exports.getRandomItemFromArray = void 0;
 const logger_1 = __nccwpck_require__(4636);
 function getRandomItemFromArray(items) {
     return items[Math.floor(Math.random() * items.length)];
 }
+exports.getRandomItemFromArray = getRandomItemFromArray;
 function withDebugLog(executeFunction) {
     return function (param) {
         (0, logger_1.debug)(`[${executeFunction.name}]. Params: ${JSON.stringify(param)}`);
@@ -29608,6 +29603,7 @@ function withDebugLog(executeFunction) {
         return result;
     };
 }
+exports.withDebugLog = withDebugLog;
 function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
     if (!configSageUsers) {
         return [];
@@ -29621,6 +29617,7 @@ function convertSageEmailsToUsernames({ configSageUsers, emailsList, }) {
     }, []);
     return loginsFromEmails;
 }
+exports.convertSageEmailsToUsernames = convertSageEmailsToUsernames;
 
 
 /***/ }),
@@ -38196,7 +38193,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"pr-automation","version":"1.1.0","description":"GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.","scripts":{"build:auto-assign":"ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js","build:auto-merge":"ncc build ./src/actions/auto-merge.ts -o dist && mv ./dist/index.js ./dist/auto-merge.js","build":"npm run build:auto-assign && npm run build:auto-merge","test":"tsc --noEmit && NODE_ENV=test mocha","lint":"eslint -f unix \\"src/**/*.@(ts|tsx)\\"","lint:fix":"eslint --fix -f unix \\"src/**/*.@(ts|tsx)\\"","prepare":"husky install"},"type":"commonjs","husky":{"hooks":{"pre-commit":"npm run lint && npm run test"}},"keywords":[],"license":"MIT","dependencies":{"@actions/core":"1.10.1","@actions/github":"^4.0.0","@octokit/types":"^5.5.0","@octokit/webhooks":"^7.21.0","joi":"17.12.2","minimatch":"^5.1.0","node-fetch":"2.6.13","node-notifier":">=8.0.1","yaml":"2.3.4"},"devDependencies":{"@ezetech/eslint-config":"3.2.0","@types/chai":"4.3.11","@types/minimatch":"3.0.5","@types/mocha":"^10.0.6","@types/node":"20.11.20","@types/node-fetch":"2.6.11","@typescript-eslint/eslint-plugin":"6.9.1","@typescript-eslint/parser":"6.9.1","@vercel/ncc":"^0.36.1","chai":"4.4.1","eslint":"8.52.0","eslint-config-prettier":"8.5.0","eslint-plugin-filenames-simple":"^0.8.0","eslint-plugin-import":"2.26.0","eslint-plugin-jsx-a11y":"6.5.1","eslint-plugin-more":"1.0.5","eslint-plugin-no-null":"1.0.2","eslint-plugin-no-only-tests":"2.6.0","eslint-plugin-prettier":"5.0.1","eslint-plugin-react":"7.30.1","eslint-plugin-security":"1.5.0","eslint-plugin-spellcheck":"^0.0.20","husky":"9.0.11","mocha":"10.3.0","prettier":"3.2.5","ts-node":"10.9.2","typescript":"5.5.4"}}');
+module.exports = JSON.parse('{"name":"pr-automation","version":"1.0.0","description":"GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.","scripts":{"build:auto-assign":"ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js","build:auto-merge":"ncc build ./src/actions/auto-merge.ts -o dist && mv ./dist/index.js ./dist/auto-merge.js","build":"npm run build:auto-assign && npm run build:auto-merge","test":"tsc --noEmit && NODE_ENV=test mocha","lint":"eslint -f unix \\"src/**/*.@(ts|tsx)\\"","lint:fix":"eslint --fix -f unix \\"src/**/*.@(ts|tsx)\\"","prepare":"husky install"},"type":"commonjs","husky":{"hooks":{"pre-commit":"npm run lint && npm run test"}},"keywords":[],"license":"MIT","dependencies":{"@actions/core":"1.10.1","@actions/github":"^4.0.0","@octokit/types":"^5.5.0","@octokit/webhooks":"^7.21.0","joi":"17.12.2","minimatch":"^5.1.0","node-fetch":"2.6.13","node-notifier":">=8.0.1","yaml":"2.3.4"},"devDependencies":{"@ezetech/eslint-config":"3.2.0","@types/chai":"4.3.11","@types/minimatch":"3.0.5","@types/mocha":"^10.0.6","@types/node":"20.11.20","@types/node-fetch":"2.6.11","@typescript-eslint/eslint-plugin":"6.9.1","@typescript-eslint/parser":"6.9.1","@vercel/ncc":"^0.36.1","chai":"4.4.1","eslint":"8.52.0","eslint-config-prettier":"8.5.0","eslint-plugin-filenames-simple":"^0.8.0","eslint-plugin-import":"2.26.0","eslint-plugin-jsx-a11y":"6.5.1","eslint-plugin-more":"1.0.5","eslint-plugin-no-null":"1.0.2","eslint-plugin-no-only-tests":"2.6.0","eslint-plugin-prettier":"5.0.1","eslint-plugin-react":"7.30.1","eslint-plugin-security":"1.5.0","eslint-plugin-spellcheck":"^0.0.20","husky":"9.0.11","mocha":"10.3.0","prettier":"3.2.5","ts-node":"10.9.2","typescript":"5.2.2"}}');
 
 /***/ })
 
@@ -38245,7 +38242,7 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = run;
+exports.run = void 0;
 const core_1 = __nccwpck_require__(2186);
 const package_json_1 = __nccwpck_require__(4147);
 const github = __nccwpck_require__(978);
@@ -38344,6 +38341,7 @@ async function run() {
     }
     return;
 }
+exports.run = run;
 run();
 
 })();
