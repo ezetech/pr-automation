@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { JiraTransitions } from '../config/typings';
+import { debug } from '../logger';
 
 export function getIssueIdFromBranchName(branch: string): string | null {
   const split = branch.split('-');
@@ -59,6 +60,13 @@ export function jiraClient({
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
     body?: any | undefined,
   ) => {
+    debug(
+      `[jiraClientRequest]. Request: ${JSON.stringify({
+        url,
+        method,
+        body,
+      })}`,
+    );
     const res = body
       ? await fetch(url, {
           method,
@@ -66,8 +74,8 @@ export function jiraClient({
           ...options,
         })
       : await fetch(url, { method, ...options });
-
-    if (res.status === 200) {
+    debug(`[jiraClientRequest]. Response status: ${res.status}`);
+    if (res.ok) {
       const json = await res.json();
       return json as T;
     }
