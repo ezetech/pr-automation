@@ -1,6 +1,6 @@
 {
   "name": "pr-automation",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.",
   "scripts": {
     "build:auto-assign": "ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js",

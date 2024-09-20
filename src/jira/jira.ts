@@ -75,7 +75,7 @@ export function jiraClient({
         })
       : await fetch(url, { method, ...options });
     debug(`[jiraClientRequest]. Response status: ${res.status}`);
-    if (res.ok) {
+    if (res.status === 200) {
       const json = await res.json();
       return json as T;
     }
