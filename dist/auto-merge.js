@@ -29237,6 +29237,7 @@ exports.getIssueIdFromBranchName = getIssueIdFromBranchName;
 exports.getTransitionId = getTransitionId;
 exports.jiraClient = jiraClient;
 const node_fetch_1 = __nccwpck_require__(467);
+const logger_1 = __nccwpck_require__(4636);
 function getIssueIdFromBranchName(branch) {
     const split = branch.split('-');
     if (split.length < 2) {
@@ -29267,6 +29268,11 @@ function jiraClient({ jiraAccount, jiraToken, }) {
         },
     };
     return async (url, method = 'GET', body) => {
+        (0, logger_1.debug)(`[jiraClientRequest]. Request: ${JSON.stringify({
+            url,
+            method,
+            body,
+        })}`);
         const res = body
             ? await (0, node_fetch_1.default)(url, {
                 method,
@@ -29274,7 +29280,8 @@ function jiraClient({ jiraAccount, jiraToken, }) {
                 ...options,
             })
             : await (0, node_fetch_1.default)(url, { method, ...options });
-        if (res.status === 200) {
+        (0, logger_1.debug)(`[jiraClientRequest]. Response status: ${res.status}`);
+        if (res.ok) {
             const json = await res.json();
             return json;
         }
