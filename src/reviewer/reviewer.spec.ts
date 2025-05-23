@@ -8,6 +8,26 @@ describe('should test identifyFileChangeGroups: ', () => {
     ['file-group-2']: ['src/group2/**/*', 'src/test/group2/**/*'],
     ['file-group-common']: ['src/common/**/*', 'config.ts', 'src/specific/tsconfig.json'],
   };
+  it('should identify changed files for "all"', (done) => {
+    const result = identifyFileChangeGroups({
+      fileChangesGroups: {
+        'all-files': ['**/*'],
+      },
+      changedFiles: ['src/group1/dir1/a.ts', 'src/group1/dir2/b.ts'],
+    });
+    expect(result).to.deep.equal(['all-files']);
+    done();
+  });
+  it('should identify changed files for "all" (2)', (done) => {
+    const result = identifyFileChangeGroups({
+      fileChangesGroups: {
+        'all-files': ['**/*'],
+      },
+      changedFiles: ['README.md'],
+    });
+    expect(result).to.deep.equal(['all-files']);
+    done();
+  });
   it('should identify changed files for group 1 + common', (done) => {
     const result = identifyFileChangeGroups({
       fileChangesGroups,
