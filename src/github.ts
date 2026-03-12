@@ -263,42 +263,51 @@ export async function fetchChangedFiles({ pr }: { pr: IPullRequest }): Promise<s
   return changedFiles;
 }
 
-export async function filterCollaborators(reviewers: string[]): Promise<string[]> {
-  const octokit = getMyOctokit();
-  const collaboratorChecks = await Promise.allSettled(
-    reviewers.map((reviewer) =>
-      octokit.rest.repos.checkCollaborator({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        username: reviewer,
-      }),
-    ),
-  );
-
-  return reviewers.filter((_, index) => {
-    const result = collaboratorChecks[index];
-    if (result.status === 'fulfilled') {
-      return true;
-    }
-    warning(
-      `Reviewer "${reviewers[index]}" is not a collaborator of the repository and will be skipped.`,
-    );
-    return false;
-  });
-}
+const NON_COLLABORATOR_ERROR =
+  'Reviews may only be requested from collaborators.';
 
 export async function assignReviewers(
   pr: IPullRequest,
   reviewers: string[],
 ): Promise<void> {
   const octokit = getMyOctokit();
-  await octokit.rest.pulls.requestReviewers({
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    pull_number: pr.number,
-    reviewers: reviewers,
+
+  try {
+    await octokit.rest.pulls.requestReviewers({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      pull_number: pr.number,
+      reviewers,
+    });
+    return;
+  } catch (err) {
+    if (
+      !(err instanceof Error) ||
+      !err.message.includes(NON_COLLABORATOR_ERROR)
+    ) {
+      throw err;
+    }
+  }
+
+  // At least one reviewer is not a collaborator — retry one-by-one to skip the bad ones
+  const results = await Promise.allSettled(
+    reviewers.map((reviewer) =>
+      octokit.rest.pulls.requestReviewers({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        pull_number: pr.number,
+        reviewers: [reviewer],
+      }),
+    ),
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      warning(
+        `Reviewer "${reviewers[index]}" is not a collaborator of the repository and will be skipped.`,
+      );
+    }
   });
-  return;
 }
 
 export type CreateIssueCommentResponseData =

@@ -28467,7 +28467,6 @@ exports.fetchPullRequestReviewers = fetchPullRequestReviewers;
 exports.validatePullRequest = validatePullRequest;
 exports.fetchConfig = fetchConfig;
 exports.fetchChangedFiles = fetchChangedFiles;
-exports.filterCollaborators = filterCollaborators;
 exports.assignReviewers = assignReviewers;
 exports.updateComment = updateComment;
 exports.getExistingCommentId = getExistingCommentId;
@@ -28679,31 +28678,36 @@ async function fetchChangedFiles({ pr }) {
     } while (numberOfFilesInCurrentPage === perPage);
     return changedFiles;
 }
-async function filterCollaborators(reviewers) {
-    const octokit = getMyOctokit();
-    const collaboratorChecks = await Promise.allSettled(reviewers.map((reviewer) => octokit.rest.repos.checkCollaborator({
-        owner: github_1.context.repo.owner,
-        repo: github_1.context.repo.repo,
-        username: reviewer,
-    })));
-    return reviewers.filter((_, index) => {
-        const result = collaboratorChecks[index];
-        if (result.status === 'fulfilled') {
-            return true;
-        }
-        (0, logger_1.warning)(`Reviewer "${reviewers[index]}" is not a collaborator of the repository and will be skipped.`);
-        return false;
-    });
-}
+const NON_COLLABORATOR_ERROR = 'Reviews may only be requested from collaborators.';
 async function assignReviewers(pr, reviewers) {
     const octokit = getMyOctokit();
-    await octokit.rest.pulls.requestReviewers({
+    try {
+        await octokit.rest.pulls.requestReviewers({
+            owner: github_1.context.repo.owner,
+            repo: github_1.context.repo.repo,
+            pull_number: pr.number,
+            reviewers,
+        });
+        return;
+    }
+    catch (err) {
+        if (!(err instanceof Error) ||
+            !err.message.includes(NON_COLLABORATOR_ERROR)) {
+            throw err;
+        }
+    }
+    // At least one reviewer is not a collaborator — retry one-by-one to skip the bad ones
+    const results = await Promise.allSettled(reviewers.map((reviewer) => octokit.rest.pulls.requestReviewers({
         owner: github_1.context.repo.owner,
         repo: github_1.context.repo.repo,
         pull_number: pr.number,
-        reviewers: reviewers,
+        reviewers: [reviewer],
+    })));
+    results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+            (0, logger_1.warning)(`Reviewer "${reviewers[index]}" is not a collaborator of the repository and will be skipped.`);
+        }
     });
-    return;
 }
 async function updateComment(existingCommentId, body) {
     const octokit = getMyOctokit();
@@ -37978,13 +37982,8 @@ async function run() {
             (0, logger_1.info)(`No reviewers were matched for author ${author}. Terminating the process`);
             return;
         }
-        const collaboratorReviewers = await github.filterCollaborators(reviewersToAssign);
-        if (collaboratorReviewers.length === 0) {
-            (0, logger_1.info)(`No valid collaborator reviewers found after filtering. Terminating the process`);
-            return;
-        }
-        await github.assignReviewers(pr, collaboratorReviewers);
-        (0, logger_1.info)(`Requesting review to ${collaboratorReviewers.join(', ')}`);
+        await github.assignReviewers(pr, reviewersToAssign);
+        (0, logger_1.info)(`Requesting review to ${reviewersToAssign.join(', ')}`);
         const messageId = config.options?.withMessage?.messageId;
         (0, logger_1.debug)(`messageId: ${messageId}`);
         if (messageId) {
@@ -37995,7 +37994,7 @@ async function run() {
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                reviewersToAssign: collaboratorReviewers,
+                reviewersToAssign,
             });
             const body = `${messageId}\n\n${message}`;
             if (existingCommentId) {

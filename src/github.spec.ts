@@ -4,28 +4,35 @@ import * as actionsCore from '@actions/core';
 import * as actionsGithub from '@actions/github';
 import * as logger from './logger';
 
-describe('filterCollaborators', () => {
+describe('assignReviewers', () => {
   let getInputStub: sinon.SinonStub;
-  let getOctokitStub: sinon.SinonStub;
-  let checkCollaboratorStub: sinon.SinonStub;
+  let requestReviewersStub: sinon.SinonStub;
   let warningStub: sinon.SinonStub;
+
+  const pr = {
+    number: 42,
+    author: 'zorin-mv',
+    isDraft: false,
+    isOpen: true,
+    labelNames: [],
+    branchName: 'feature/test',
+    baseBranchName: 'main',
+  };
 
   beforeEach(() => {
     getInputStub = sinon.stub(actionsCore, 'getInput').returns('fake-token');
     warningStub = sinon.stub(logger, 'warning');
-
-    checkCollaboratorStub = sinon.stub();
+    requestReviewersStub = sinon.stub();
 
     const octokitMock = {
       rest: {
-        repos: {
-          checkCollaborator: checkCollaboratorStub,
+        pulls: {
+          requestReviewers: requestReviewersStub,
         },
       },
     };
 
-    getOctokitStub = sinon.stub(actionsGithub, 'getOctokit').returns(octokitMock as any);
-
+    sinon.stub(actionsGithub, 'getOctokit').returns(octokitMock as any);
     sinon.stub(actionsGithub.context, 'repo').value({ owner: 'test-owner', repo: 'test-repo' });
   });
 
@@ -33,64 +40,69 @@ describe('filterCollaborators', () => {
     sinon.restore();
   });
 
-  it('should return all reviewers when all are collaborators', async () => {
-    checkCollaboratorStub.resolves({ status: 204 });
+  it('should request all reviewers in a single call when all are collaborators', async () => {
+    requestReviewersStub.resolves({});
 
-    const { filterCollaborators } = await import('./github');
-    const result = await filterCollaborators(['alice', 'bob', 'charlie']);
+    const { assignReviewers } = await import('./github');
+    await assignReviewers(pr, ['alice', 'bob']);
 
-    expect(result).to.deep.equal(['alice', 'bob', 'charlie']);
+    expect(requestReviewersStub.calledOnce).to.be.true;
+    expect(requestReviewersStub.firstCall.args[0]).to.deep.include({
+      pull_number: 42,
+      reviewers: ['alice', 'bob'],
+    });
   });
 
-  it('should filter out non-collaborators', async () => {
-    checkCollaboratorStub.withArgs(sinon.match({ username: 'alice' })).resolves({ status: 204 });
-    checkCollaboratorStub.withArgs(sinon.match({ username: 'bob' })).rejects(new Error('Not a collaborator'));
-    checkCollaboratorStub.withArgs(sinon.match({ username: 'charlie' })).resolves({ status: 204 });
+  it('should retry one-by-one when batch request fails with non-collaborator error', async () => {
+    const nonCollaboratorError = new Error(
+      'Reviews may only be requested from collaborators. One or more of the users or teams you specified is not a collaborator of the ezetech/test-repo repository.',
+    );
+    requestReviewersStub.onFirstCall().rejects(nonCollaboratorError);
+    requestReviewersStub.onSecondCall().resolves({});  // alice ok
+    requestReviewersStub.onThirdCall().rejects(nonCollaboratorError); // bob not a collaborator
 
-    const { filterCollaborators } = await import('./github');
-    const result = await filterCollaborators(['alice', 'bob', 'charlie']);
+    const { assignReviewers } = await import('./github');
+    await assignReviewers(pr, ['alice', 'bob']);
 
-    expect(result).to.deep.equal(['alice', 'charlie']);
+    expect(requestReviewersStub.callCount).to.equal(3);
   });
 
-  it('should return empty array when no reviewers are collaborators', async () => {
-    checkCollaboratorStub.rejects(new Error('Not a collaborator'));
+  it('should log a warning for each reviewer that fails individually', async () => {
+    const nonCollaboratorError = new Error(
+      'Reviews may only be requested from collaborators.',
+    );
+    requestReviewersStub.onFirstCall().rejects(nonCollaboratorError);
+    requestReviewersStub.onSecondCall().resolves({});
+    requestReviewersStub.onThirdCall().rejects(nonCollaboratorError);
 
-    const { filterCollaborators } = await import('./github');
-    const result = await filterCollaborators(['alice', 'bob']);
-
-    expect(result).to.deep.equal([]);
-  });
-
-  it('should return empty array when given empty reviewers list', async () => {
-    const { filterCollaborators } = await import('./github');
-    const result = await filterCollaborators([]);
-
-    expect(result).to.deep.equal([]);
-    expect(checkCollaboratorStub.callCount).to.equal(0);
-  });
-
-  it('should log a warning for each non-collaborator', async () => {
-    checkCollaboratorStub.withArgs(sinon.match({ username: 'alice' })).resolves({ status: 204 });
-    checkCollaboratorStub.withArgs(sinon.match({ username: 'bob' })).rejects(new Error('Not a collaborator'));
-
-    const { filterCollaborators } = await import('./github');
-    await filterCollaborators(['alice', 'bob']);
+    const { assignReviewers } = await import('./github');
+    await assignReviewers(pr, ['alice', 'bob']);
 
     expect(warningStub.calledOnce).to.be.true;
     expect(warningStub.firstCall.args[0]).to.include('bob');
   });
 
-  it('should call checkCollaborator with correct owner, repo and username', async () => {
-    checkCollaboratorStub.resolves({ status: 204 });
+  it('should rethrow errors unrelated to collaborator check', async () => {
+    const networkError = new Error('Network failure');
+    requestReviewersStub.rejects(networkError);
 
-    const { filterCollaborators } = await import('./github');
-    await filterCollaborators(['alice']);
+    const { assignReviewers } = await import('./github');
+    let thrown: Error | undefined;
+    try {
+      await assignReviewers(pr, ['alice']);
+    } catch (err) {
+      thrown = err as Error;
+    }
+    expect(thrown?.message).to.equal('Network failure');
+  });
 
-    expect(checkCollaboratorStub.calledOnceWith({
-      owner: 'test-owner',
-      repo: 'test-repo',
-      username: 'alice',
-    })).to.be.true;
+  it('should succeed without retry when reviewer list is empty', async () => {
+    requestReviewersStub.resolves({});
+
+    const { assignReviewers } = await import('./github');
+    await assignReviewers(pr, []);
+
+    expect(requestReviewersStub.calledOnce).to.be.true;
+    expect(warningStub.called).to.be.false;
   });
 });
