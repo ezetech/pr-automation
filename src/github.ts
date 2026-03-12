@@ -263,6 +263,30 @@ export async function fetchChangedFiles({ pr }: { pr: IPullRequest }): Promise<s
   return changedFiles;
 }
 
+export async function filterCollaborators(reviewers: string[]): Promise<string[]> {
+  const octokit = getMyOctokit();
+  const collaboratorChecks = await Promise.allSettled(
+    reviewers.map((reviewer) =>
+      octokit.rest.repos.checkCollaborator({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        username: reviewer,
+      }),
+    ),
+  );
+
+  return reviewers.filter((_, index) => {
+    const result = collaboratorChecks[index];
+    if (result.status === 'fulfilled') {
+      return true;
+    }
+    warning(
+      `Reviewer "${reviewers[index]}" is not a collaborator of the repository and will be skipped.`,
+    );
+    return false;
+  });
+}
+
 export async function assignReviewers(
   pr: IPullRequest,
   reviewers: string[],
