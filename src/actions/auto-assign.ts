@@ -109,9 +109,16 @@ export async function run(): Promise<void> {
       info(`No reviewers were matched for author ${author}. Terminating the process`);
       return;
     }
-    await github.assignReviewers(pr, reviewersToAssign);
 
-    info(`Requesting review to ${reviewersToAssign.join(', ')}`);
+    const collaboratorReviewers = await github.filterCollaborators(reviewersToAssign);
+    if (collaboratorReviewers.length === 0) {
+      info(`No valid collaborator reviewers found after filtering. Terminating the process`);
+      return;
+    }
+
+    await github.assignReviewers(pr, collaboratorReviewers);
+
+    info(`Requesting review to ${collaboratorReviewers.join(', ')}`);
 
     const messageId = config.options?.withMessage?.messageId;
     debug(`messageId: ${messageId}`);
@@ -123,7 +130,7 @@ export async function run(): Promise<void> {
         fileChangesGroups,
         rulesByCreator: config.rulesByCreator,
         defaultRules: config.defaultRules,
-        reviewersToAssign,
+        reviewersToAssign: collaboratorReviewers,
       });
       const body = `${messageId}\n\n${message}`;
       if (existingCommentId) {
