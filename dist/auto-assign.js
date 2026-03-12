@@ -28467,6 +28467,7 @@ exports.fetchPullRequestReviewers = fetchPullRequestReviewers;
 exports.validatePullRequest = validatePullRequest;
 exports.fetchConfig = fetchConfig;
 exports.fetchChangedFiles = fetchChangedFiles;
+exports.filterCollaborators = filterCollaborators;
 exports.assignReviewers = assignReviewers;
 exports.updateComment = updateComment;
 exports.getExistingCommentId = getExistingCommentId;
@@ -28677,6 +28678,22 @@ async function fetchChangedFiles({ pr }) {
         changedFiles.push(...responseBody.map((file) => file.filename));
     } while (numberOfFilesInCurrentPage === perPage);
     return changedFiles;
+}
+async function filterCollaborators(reviewers) {
+    const octokit = getMyOctokit();
+    const collaboratorChecks = await Promise.allSettled(reviewers.map((reviewer) => octokit.rest.repos.checkCollaborator({
+        owner: github_1.context.repo.owner,
+        repo: github_1.context.repo.repo,
+        username: reviewer,
+    })));
+    return reviewers.filter((_, index) => {
+        const result = collaboratorChecks[index];
+        if (result.status === 'fulfilled') {
+            return true;
+        }
+        (0, logger_1.warning)(`Reviewer "${reviewers[index]}" is not a collaborator of the repository and will be skipped.`);
+        return false;
+    });
 }
 async function assignReviewers(pr, reviewers) {
     const octokit = getMyOctokit();
@@ -37830,7 +37847,7 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"pr-automation","version":"1.2.1","description":"GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.","scripts":{"build:auto-assign":"ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js","build:auto-merge":"ncc build ./src/actions/auto-merge.ts -o dist && mv ./dist/index.js ./dist/auto-merge.js","build":"npm run build:auto-assign && npm run build:auto-merge","test":"tsc --noEmit && NODE_ENV=test mocha","lint":"eslint -f unix \\"src/**/*.@(ts|tsx)\\"","lint:fix":"eslint --fix -f unix \\"src/**/*.@(ts|tsx)\\"","prepare":"husky install"},"type":"commonjs","husky":{"hooks":{"pre-commit":"npm run lint && npm run test"}},"keywords":[],"license":"MIT","dependencies":{"@actions/core":"1.10.1","@actions/github":"^4.0.0","@octokit/types":"^5.5.0","@octokit/webhooks":"^7.21.0","joi":"17.12.2","minimatch":"^5.1.0","node-fetch":"2.6.13","node-notifier":">=8.0.1","yaml":"2.3.4"},"devDependencies":{"@ezetech/eslint-config":"3.2.0","@types/chai":"4.3.11","@types/minimatch":"3.0.5","@types/mocha":"^10.0.6","@types/node":"20.11.20","@types/node-fetch":"2.6.11","@typescript-eslint/eslint-plugin":"6.9.1","@typescript-eslint/parser":"6.9.1","@vercel/ncc":"^0.36.1","chai":"4.4.1","eslint":"8.52.0","eslint-config-prettier":"8.5.0","eslint-plugin-filenames-simple":"^0.8.0","eslint-plugin-import":"2.26.0","eslint-plugin-jsx-a11y":"6.5.1","eslint-plugin-more":"1.0.5","eslint-plugin-no-null":"1.0.2","eslint-plugin-no-only-tests":"2.6.0","eslint-plugin-prettier":"5.0.1","eslint-plugin-react":"7.30.1","eslint-plugin-security":"1.5.0","eslint-plugin-spellcheck":"^0.0.20","husky":"9.0.11","mocha":"10.3.0","prettier":"3.2.5","ts-node":"10.9.2","typescript":"5.5.4"}}');
+module.exports = JSON.parse('{"name":"pr-automation","version":"1.2.1","description":"GitHub Action that automatically requests review of a pull request based on who creates PR and what files were changed. Automerge PR based on that rules.","scripts":{"build:auto-assign":"ncc build ./src/actions/auto-assign.ts -o dist && mv ./dist/index.js ./dist/auto-assign.js","build:auto-merge":"ncc build ./src/actions/auto-merge.ts -o dist && mv ./dist/index.js ./dist/auto-merge.js","build":"npm run build:auto-assign && npm run build:auto-merge","test":"tsc --noEmit && NODE_ENV=test mocha","lint":"eslint -f unix \\"src/**/*.@(ts|tsx)\\"","lint:fix":"eslint --fix -f unix \\"src/**/*.@(ts|tsx)\\"","prepare":"husky install"},"type":"commonjs","husky":{"hooks":{"pre-commit":"npm run lint && npm run test"}},"keywords":[],"license":"MIT","dependencies":{"@actions/core":"1.10.1","@actions/github":"^4.0.0","@octokit/types":"^5.5.0","@octokit/webhooks":"^7.21.0","joi":"17.12.2","minimatch":"^5.1.0","node-fetch":"2.6.13","node-notifier":">=8.0.1","yaml":"2.3.4"},"devDependencies":{"@ezetech/eslint-config":"3.2.0","@types/chai":"4.3.11","@types/minimatch":"3.0.5","@types/mocha":"^10.0.6","@types/node":"20.11.20","@types/node-fetch":"2.6.11","@types/sinon":"^21.0.0","@typescript-eslint/eslint-plugin":"6.9.1","@typescript-eslint/parser":"6.9.1","@vercel/ncc":"^0.36.1","chai":"4.4.1","eslint":"8.52.0","eslint-config-prettier":"8.5.0","eslint-plugin-filenames-simple":"^0.8.0","eslint-plugin-import":"2.26.0","eslint-plugin-jsx-a11y":"6.5.1","eslint-plugin-more":"1.0.5","eslint-plugin-no-null":"1.0.2","eslint-plugin-no-only-tests":"2.6.0","eslint-plugin-prettier":"5.0.1","eslint-plugin-react":"7.30.1","eslint-plugin-security":"1.5.0","eslint-plugin-spellcheck":"^0.0.20","husky":"9.0.11","mocha":"10.3.0","prettier":"3.2.5","sinon":"^21.0.2","ts-node":"10.9.2","typescript":"5.5.4"}}');
 
 /***/ })
 
@@ -37961,8 +37978,13 @@ async function run() {
             (0, logger_1.info)(`No reviewers were matched for author ${author}. Terminating the process`);
             return;
         }
-        await github.assignReviewers(pr, reviewersToAssign);
-        (0, logger_1.info)(`Requesting review to ${reviewersToAssign.join(', ')}`);
+        const collaboratorReviewers = await github.filterCollaborators(reviewersToAssign);
+        if (collaboratorReviewers.length === 0) {
+            (0, logger_1.info)(`No valid collaborator reviewers found after filtering. Terminating the process`);
+            return;
+        }
+        await github.assignReviewers(pr, collaboratorReviewers);
+        (0, logger_1.info)(`Requesting review to ${collaboratorReviewers.join(', ')}`);
         const messageId = config.options?.withMessage?.messageId;
         (0, logger_1.debug)(`messageId: ${messageId}`);
         if (messageId) {
@@ -37973,7 +37995,7 @@ async function run() {
                 fileChangesGroups,
                 rulesByCreator: config.rulesByCreator,
                 defaultRules: config.defaultRules,
-                reviewersToAssign,
+                reviewersToAssign: collaboratorReviewers,
             });
             const body = `${messageId}\n\n${message}`;
             if (existingCommentId) {
